@@ -1,0 +1,1 @@
+-I"/home/tomasz/Desktop/adas gooner/build_win/_deps/asio-src/asio/include" -I"/home/tomasz/Desktop/adas gooner/include/win" -I"/home/tomasz/Desktop/adas gooner/src" -I"/home/tomasz/Desktop/adas gooner/src/player" -I"/home/tomasz/Desktop/adas gooner/src/enemies" -I"/home/tomasz/Desktop/adas gooner/src/map"

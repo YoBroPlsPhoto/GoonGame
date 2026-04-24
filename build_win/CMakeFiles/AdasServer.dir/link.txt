@@ -1,0 +1,3 @@
+/usr/bin/cmake -E rm -f CMakeFiles/AdasServer.dir/objects.a
+/usr/bin/x86_64-w64-mingw32-ar qc CMakeFiles/AdasServer.dir/objects.a @CMakeFiles/AdasServer.dir/objects1.rsp
+/usr/bin/x86_64-w64-mingw32-g++ -static-libgcc -static-libstdc++ -static -Wl,--whole-archive CMakeFiles/AdasServer.dir/objects.a -Wl,--no-whole-archive -o AdasServer.exe -Wl,--out-implib,libAdasServer.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/AdasServer.dir/linkLibs.rsp

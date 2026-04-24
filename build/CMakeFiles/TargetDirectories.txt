@@ -1,0 +1,4 @@
+/home/tomasz/Desktop/adas gooner/build/CMakeFiles/AdasGooner.dir
+/home/tomasz/Desktop/adas gooner/build/CMakeFiles/AdasServer.dir
+/home/tomasz/Desktop/adas gooner/build/CMakeFiles/edit_cache.dir
+/home/tomasz/Desktop/adas gooner/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/AdasServer.dir/link.d CMakeFiles/AdasServer.dir/src/server_main.cpp.o CMakeFiles/AdasServer.dir/src/network/network_manager.cpp.o -o AdasServer  "/home/tomasz/Desktop/adas gooner/include/linux64/libraylib.a" -lX11 -lGL -lm -ldl -lrt
