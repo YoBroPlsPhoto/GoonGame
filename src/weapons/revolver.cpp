@@ -45,7 +45,7 @@ void Revolver::DrawViewModel(Camera3D camera) {
     // Strong upward kick for revolver
     float kickUp = (recoilTimer > 0) ? (recoilTimer / 0.2f) * 0.08f : 0.0f;
     
-    rlTranslatef(0.3f, -0.25f + gunBob + kickUp, 0.4f - recoil);
+    rlTranslatef(-0.3f, -0.25f + gunBob + kickUp, 0.4f - recoil);
 
     // Hand
     DrawCube((Vector3){0, -0.12f, -0.08f}, 0.14f, 0.14f, 0.16f, {255, 200, 150, 255});

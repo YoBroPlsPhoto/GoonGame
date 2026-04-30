@@ -2,6 +2,7 @@
 #define PLAYER_HPP
 
 #include "raylib.h"
+#include <vector>
 #include "../weapons/weapon.hpp"
 
 class Player {
@@ -39,6 +40,9 @@ public:
     
     // Weapon System
     Weapon* currentWeapon = nullptr;
+    Weapon* previousWeapon = nullptr;
+    std::vector<Weapon*> inventory;
+    bool showInventory = false;
 
     Player(Vector3 startPos, int id);
     ~Player();

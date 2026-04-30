@@ -41,7 +41,7 @@ void AK47::DrawViewModel(Camera3D camera) {
 
     float recoil = (recoilTimer > 0) ? (recoilTimer / 0.08f) * 0.12f : 0.0f;
     
-    rlTranslatef(0.35f, -0.3f + gunBob, 0.5f - recoil); 
+    rlTranslatef(-0.35f, -0.3f + gunBob, 0.5f - recoil); 
 
     // Hand
     DrawCube((Vector3){0, -0.1f, -0.05f}, 0.12f, 0.12f, 0.15f, {255, 200, 150, 255});

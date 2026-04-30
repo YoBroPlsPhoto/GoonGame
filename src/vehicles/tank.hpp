@@ -14,6 +14,10 @@ public:
     float muzzleFlash;   // timer for muzzle flash
     float recoilOffset;  // for barrel kickback animation
     
+    float trackLAnimation;
+    float trackRAnimation;
+    float smokeTimer;
+    
     Tank(Vector3 pos);
     
     void Update(float dt) override;
@@ -34,7 +38,7 @@ public:
     float explosionTimer; // for destruction?
 
 private:
-    float trackAnimation;
+    // Removed unitrack trackAnimation
 };
 
 #endif

@@ -34,6 +34,7 @@ set(SOURCES
     src/weapons/shotgun.cpp
     src/weapons/revolver.cpp
     src/weapons/rpg.cpp
+    src/weapons/knife.cpp
     src/effects/particle_system.cpp
     src/vehicles/vehicle.cpp
     src/vehicles/tank.cpp
@@ -48,7 +49,11 @@ else()
 endif()
 set(RAYLIB_LIB ${RAYLIB_PATH}/libraylib.a)
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+if(WIN32)
+    add_executable(${PROJECT_NAME} WIN32 ${SOURCES})
+else()
+    add_executable(${PROJECT_NAME} ${SOURCES})
+endif()
 add_executable(AdasServer src/server_main.cpp src/network/network_manager.cpp)
 
 # Common settings
@@ -63,7 +68,7 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 mswsock gdi32 winmm)
     target_link_libraries(AdasServer PRIVATE ws2_32 mswsock gdi32 winmm)
     # Static linking for standalone Windows executables
-    target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -static)
+    target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -static -mwindows)
     target_link_options(AdasServer PRIVATE -static-libgcc -static-libstdc++ -static)
 else()
     target_link_libraries(${PROJECT_NAME} PRIVATE X11 GL m dl rt)

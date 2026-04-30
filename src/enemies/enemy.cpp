@@ -229,8 +229,9 @@ void Enemy::Draw() {
 void Enemy::DrawHUD(Camera3D camera) {
     if (!active || hp <= 0) return;
 
-    // Only show HP bar if within 25 meters
-    if (Vector3Distance(position, camera.position) > 25.0f) return;
+    // Show HP bar from a much further distance
+    float viewDist = (type == EnemyType::BOSS) ? 400.0f : 150.0f;
+    if (Vector3Distance(position, camera.position) > viewDist) return;
 
     float scale = (type == EnemyType::BOSS) ? 4.5f : 1.5f;
     Vector3 barPos = { position.x, position.y + 2.5f * scale, position.z };
@@ -256,17 +257,25 @@ void Enemy::DrawHUD(Camera3D camera) {
 }
 
 void Enemy::HandleCollision(BoundingBox box) {
+    // Boss can step over small obstacles (like trash cans)
+    if (type == EnemyType::BOSS && box.max.y < 3.0f) return;
+
     BoundingBox enemyBox = GetBoundingBox();
     if (CheckCollisionBoxes(enemyBox, box)) {
+        float scale = (type == EnemyType::BOSS) ? 4.5f : 1.5f;
+        float pushDist = 0.72f * scale; // Adjust push distance based on enemy size
+
         float dx1 = enemyBox.max.x - box.min.x;
         float dx2 = box.max.x - enemyBox.min.x;
         float dz1 = enemyBox.max.z - box.min.z;
         float dz2 = box.max.z - enemyBox.min.z;
+        
         float minOverlap = fmin(fmin(dx1, dx2), fmin(dz1, dz2));
-        if (minOverlap == dx1) position.x = box.min.x - 0.7f;
-        else if (minOverlap == dx2) position.x = box.max.x + 0.7f;
-        else if (minOverlap == dz1) position.z = box.min.z - 0.7f;
-        else if (minOverlap == dz2) position.z = box.max.z + 0.7f;
+        
+        if (minOverlap == dx1) position.x = box.min.x - pushDist;
+        else if (minOverlap == dx2) position.x = box.max.x + pushDist;
+        else if (minOverlap == dz1) position.z = box.min.z - pushDist;
+        else if (minOverlap == dz2) position.z = box.max.z + pushDist;
     }
 }
 

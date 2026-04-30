@@ -46,6 +46,7 @@ AdasGooner: /home/tomasz/Desktop/adas \
   CMakeFiles/AdasGooner.dir/src/weapons/ak47.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/awp.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.o \
+  CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/minigun.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o \
@@ -1122,6 +1123,7 @@ CMakeFiles/AdasGooner.dir/src/main.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/
   /home/tomasz/Desktop/adas\ gooner/include/linux64/rlgl.h \
   /home/tomasz/Desktop/adas\ gooner/src/enemies/enemy.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/bosses/adas_gooner.hpp \
+  /home/tomasz/Desktop/adas\ gooner/src/effects/particle_system.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/player/player.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/enemies/enemy.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/hud/menu.hpp \
@@ -2631,6 +2633,7 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.o: /home/tomasz/Desktop/adas\ go
   /home/tomasz/Desktop/adas\ gooner/include/linux64/raymath.h \
   /home/tomasz/Desktop/adas\ gooner/include/linux64/rlgl.h \
   /home/tomasz/Desktop/adas\ gooner/src/weapons/glock.hpp \
+  /home/tomasz/Desktop/adas\ gooner/src/weapons/knife.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/weapons/weapon.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/player/player.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/player/rcamera.h \
@@ -2679,32 +2682,56 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.o: /home/tomasz/Desktop/adas\ go
   /usr/include/bits/waitflags.h \
   /usr/include/bits/waitstatus.h \
   /usr/include/bits/wordsize.h \
+  /usr/include/c++/15.2.1/backward/binders.h \
   /usr/include/c++/15.2.1/bit \
+  /usr/include/c++/15.2.1/bits/alloc_traits.h \
+  /usr/include/c++/15.2.1/bits/allocator.h \
   /usr/include/c++/15.2.1/bits/concept_check.h \
   /usr/include/c++/15.2.1/bits/cpp_type_traits.h \
+  /usr/include/c++/15.2.1/bits/exception.h \
   /usr/include/c++/15.2.1/bits/exception_defines.h \
   /usr/include/c++/15.2.1/bits/functexcept.h \
+  /usr/include/c++/15.2.1/bits/functional_hash.h \
+  /usr/include/c++/15.2.1/bits/hash_bytes.h \
+  /usr/include/c++/15.2.1/bits/invoke.h \
+  /usr/include/c++/15.2.1/bits/memory_resource.h \
+  /usr/include/c++/15.2.1/bits/memoryfwd.h \
   /usr/include/c++/15.2.1/bits/move.h \
+  /usr/include/c++/15.2.1/bits/new_allocator.h \
   /usr/include/c++/15.2.1/bits/predefined_ops.h \
   /usr/include/c++/15.2.1/bits/ptr_traits.h \
+  /usr/include/c++/15.2.1/bits/range_access.h \
+  /usr/include/c++/15.2.1/bits/refwrap.h \
   /usr/include/c++/15.2.1/bits/requires_hosted.h \
   /usr/include/c++/15.2.1/bits/specfun.h \
   /usr/include/c++/15.2.1/bits/std_abs.h \
   /usr/include/c++/15.2.1/bits/stl_algobase.h \
+  /usr/include/c++/15.2.1/bits/stl_bvector.h \
+  /usr/include/c++/15.2.1/bits/stl_construct.h \
+  /usr/include/c++/15.2.1/bits/stl_function.h \
   /usr/include/c++/15.2.1/bits/stl_iterator.h \
   /usr/include/c++/15.2.1/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/15.2.1/bits/stl_iterator_base_types.h \
   /usr/include/c++/15.2.1/bits/stl_pair.h \
+  /usr/include/c++/15.2.1/bits/stl_uninitialized.h \
+  /usr/include/c++/15.2.1/bits/stl_vector.h \
+  /usr/include/c++/15.2.1/bits/uses_allocator.h \
+  /usr/include/c++/15.2.1/bits/uses_allocator_args.h \
   /usr/include/c++/15.2.1/bits/utility.h \
+  /usr/include/c++/15.2.1/bits/vector.tcc \
   /usr/include/c++/15.2.1/bits/version.h \
   /usr/include/c++/15.2.1/cmath \
   /usr/include/c++/15.2.1/concepts \
+  /usr/include/c++/15.2.1/cstddef \
   /usr/include/c++/15.2.1/debug/assertions.h \
   /usr/include/c++/15.2.1/debug/debug.h \
+  /usr/include/c++/15.2.1/ext/alloc_traits.h \
   /usr/include/c++/15.2.1/ext/numeric_traits.h \
   /usr/include/c++/15.2.1/ext/type_traits.h \
+  /usr/include/c++/15.2.1/initializer_list \
   /usr/include/c++/15.2.1/limits \
   /usr/include/c++/15.2.1/math.h \
+  /usr/include/c++/15.2.1/new \
   /usr/include/c++/15.2.1/pstl/pstl_config.h \
   /usr/include/c++/15.2.1/tr1/bessel_function.tcc \
   /usr/include/c++/15.2.1/tr1/beta_function.tcc \
@@ -2718,7 +2745,10 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.o: /home/tomasz/Desktop/adas\ go
   /usr/include/c++/15.2.1/tr1/poly_laguerre.tcc \
   /usr/include/c++/15.2.1/tr1/riemann_zeta.tcc \
   /usr/include/c++/15.2.1/tr1/special_function_util.h \
+  /usr/include/c++/15.2.1/tuple \
   /usr/include/c++/15.2.1/type_traits \
+  /usr/include/c++/15.2.1/vector \
+  /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++allocator.h \
   /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++config.h \
   /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/cpu_defines.h \
   /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/os_defines.h \
@@ -2811,7 +2841,6 @@ CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o: /home/tomasz/Desktop/adas\ go
   /usr/include/c++/15.2.1/debug/debug.h \
   /usr/include/c++/15.2.1/ext/numeric_traits.h \
   /usr/include/c++/15.2.1/ext/type_traits.h \
-  /usr/include/c++/15.2.1/initializer_list \
   /usr/include/c++/15.2.1/limits \
   /usr/include/c++/15.2.1/math.h \
   /usr/include/c++/15.2.1/pstl/pstl_config.h \
@@ -3173,6 +3202,114 @@ CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.o: /home/tomasz/Desktop/adas\ go
   /home/tomasz/Desktop/adas\ gooner/include/linux64/raymath.h \
   /home/tomasz/Desktop/adas\ gooner/include/linux64/rlgl.h \
   /home/tomasz/Desktop/adas\ gooner/src/weapons/glock.hpp \
+  /home/tomasz/Desktop/adas\ gooner/src/weapons/weapon.hpp \
+  /usr/include/alloca.h \
+  /usr/include/bits/atomic_wide_counter.h \
+  /usr/include/bits/byteswap.h \
+  /usr/include/bits/endian.h \
+  /usr/include/bits/endianness.h \
+  /usr/include/bits/floatn-common.h \
+  /usr/include/bits/floatn.h \
+  /usr/include/bits/flt-eval-method.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/fp-logb.h \
+  /usr/include/bits/iscanonical.h \
+  /usr/include/bits/libc-header-start.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
+  /usr/include/bits/long-double.h \
+  /usr/include/bits/math-vector.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls-macros.h \
+  /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/mathcalls.h \
+  /usr/include/bits/pthreadtypes-arch.h \
+  /usr/include/bits/pthreadtypes.h \
+  /usr/include/bits/select.h \
+  /usr/include/bits/stdint-intn.h \
+  /usr/include/bits/stdlib-float.h \
+  /usr/include/bits/struct_mutex.h \
+  /usr/include/bits/struct_rwlock.h \
+  /usr/include/bits/thread-shared-types.h \
+  /usr/include/bits/time64.h \
+  /usr/include/bits/timesize.h \
+  /usr/include/bits/types.h \
+  /usr/include/bits/types/__locale_t.h \
+  /usr/include/bits/types/__sigset_t.h \
+  /usr/include/bits/types/clock_t.h \
+  /usr/include/bits/types/clockid_t.h \
+  /usr/include/bits/types/locale_t.h \
+  /usr/include/bits/types/sigset_t.h \
+  /usr/include/bits/types/struct_timespec.h \
+  /usr/include/bits/types/struct_timeval.h \
+  /usr/include/bits/types/time_t.h \
+  /usr/include/bits/types/timer_t.h \
+  /usr/include/bits/typesizes.h \
+  /usr/include/bits/uintn-identity.h \
+  /usr/include/bits/waitflags.h \
+  /usr/include/bits/waitstatus.h \
+  /usr/include/bits/wordsize.h \
+  /usr/include/c++/15.2.1/bit \
+  /usr/include/c++/15.2.1/bits/concept_check.h \
+  /usr/include/c++/15.2.1/bits/cpp_type_traits.h \
+  /usr/include/c++/15.2.1/bits/exception_defines.h \
+  /usr/include/c++/15.2.1/bits/functexcept.h \
+  /usr/include/c++/15.2.1/bits/move.h \
+  /usr/include/c++/15.2.1/bits/predefined_ops.h \
+  /usr/include/c++/15.2.1/bits/ptr_traits.h \
+  /usr/include/c++/15.2.1/bits/requires_hosted.h \
+  /usr/include/c++/15.2.1/bits/specfun.h \
+  /usr/include/c++/15.2.1/bits/std_abs.h \
+  /usr/include/c++/15.2.1/bits/stl_algobase.h \
+  /usr/include/c++/15.2.1/bits/stl_iterator.h \
+  /usr/include/c++/15.2.1/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15.2.1/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15.2.1/bits/stl_pair.h \
+  /usr/include/c++/15.2.1/bits/utility.h \
+  /usr/include/c++/15.2.1/bits/version.h \
+  /usr/include/c++/15.2.1/cmath \
+  /usr/include/c++/15.2.1/concepts \
+  /usr/include/c++/15.2.1/debug/assertions.h \
+  /usr/include/c++/15.2.1/debug/debug.h \
+  /usr/include/c++/15.2.1/ext/numeric_traits.h \
+  /usr/include/c++/15.2.1/ext/type_traits.h \
+  /usr/include/c++/15.2.1/limits \
+  /usr/include/c++/15.2.1/math.h \
+  /usr/include/c++/15.2.1/pstl/pstl_config.h \
+  /usr/include/c++/15.2.1/tr1/bessel_function.tcc \
+  /usr/include/c++/15.2.1/tr1/beta_function.tcc \
+  /usr/include/c++/15.2.1/tr1/ell_integral.tcc \
+  /usr/include/c++/15.2.1/tr1/exp_integral.tcc \
+  /usr/include/c++/15.2.1/tr1/gamma.tcc \
+  /usr/include/c++/15.2.1/tr1/hypergeometric.tcc \
+  /usr/include/c++/15.2.1/tr1/legendre_function.tcc \
+  /usr/include/c++/15.2.1/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15.2.1/tr1/poly_hermite.tcc \
+  /usr/include/c++/15.2.1/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15.2.1/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15.2.1/tr1/special_function_util.h \
+  /usr/include/c++/15.2.1/type_traits \
+  /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++config.h \
+  /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/cpu_defines.h \
+  /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/os_defines.h \
+  /usr/include/endian.h \
+  /usr/include/features-time64.h \
+  /usr/include/features.h \
+  /usr/include/gnu/stubs-64.h \
+  /usr/include/gnu/stubs.h \
+  /usr/include/math.h \
+  /usr/include/stdc-predef.h \
+  /usr/include/stdlib.h \
+  /usr/include/sys/cdefs.h \
+  /usr/include/sys/select.h \
+  /usr/include/sys/types.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include/stdarg.h \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include/stddef.h
+
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/weapons/knife.cpp \
+  /home/tomasz/Desktop/adas\ gooner/include/linux64/raylib.h \
+  /home/tomasz/Desktop/adas\ gooner/include/linux64/raymath.h \
+  /home/tomasz/Desktop/adas\ gooner/include/linux64/rlgl.h \
+  /home/tomasz/Desktop/adas\ gooner/src/weapons/knife.hpp \
   /home/tomasz/Desktop/adas\ gooner/src/weapons/weapon.hpp \
   /usr/include/alloca.h \
   /usr/include/bits/atomic_wide_counter.h \
@@ -3713,11 +3850,15 @@ CMakeFiles/AdasGooner.dir/src/weapons/shotgun.cpp.o: /home/tomasz/Desktop/adas\ 
 
 /home/tomasz/Desktop/adas\ gooner/src/weapons/revolver.cpp:
 
+/home/tomasz/Desktop/adas\ gooner/src/weapons/knife.cpp:
+
 /home/tomasz/Desktop/adas\ gooner/src/weapons/glock.cpp:
 
 /home/tomasz/Desktop/adas\ gooner/src/vehicles/vehicle.cpp:
 
 /home/tomasz/Desktop/adas\ gooner/src/player/rcamera.h:
+
+/home/tomasz/Desktop/adas\ gooner/src/weapons/knife.hpp:
 
 /home/tomasz/Desktop/adas\ gooner/src/player/player.cpp:
 
@@ -4169,6 +4310,8 @@ _deps/asio-src/asio/include/asio/impl/append.hpp:
 
 _deps/asio-src/asio/include/asio/high_resolution_timer.hpp:
 
+_deps/asio-src/asio/include/asio/generic/stream_protocol.hpp:
+
 _deps/asio-src/asio/include/asio/is_executor.hpp:
 
 /usr/include/bits/typesizes.h:
@@ -4290,12 +4433,6 @@ _deps/asio-src/asio/include/asio/detail/concurrency_hint.hpp:
 _deps/asio-src/asio/include/asio/detail/chrono_time_traits.hpp:
 
 /usr/lib/librt.a:
-
-/usr/include/bits/stat.h:
-
-/usr/include/c++/15.2.1/bits/stringfwd.h:
-
-/usr/include/c++/15.2.1/cmath:
 
 /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/os_defines.h:
 
@@ -4426,8 +4563,6 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.o:
 /home/tomasz/Desktop/adas\ gooner/src/map/desert_map.cpp:
 
 _deps/asio-src/asio/include/asio/detail/local_free_on_block_exit.hpp:
-
-_deps/asio-src/asio/include/asio/generic/stream_protocol.hpp:
 
 /usr/include/c++/15.2.1/tr1/poly_laguerre.tcc:
 
@@ -4645,10 +4780,6 @@ _deps/asio-src/asio/include/asio/impl/execution_context.hpp:
 
 /usr/lib/libXdmcp.so.6:
 
-/usr/include/bits/sigstksz.h:
-
-/usr/include/alloca.h:
-
 /usr/lib/libm.so:
 
 _deps/asio-src/asio/include/asio/basic_datagram_socket.hpp:
@@ -4744,6 +4875,10 @@ _deps/asio-src/asio/include/asio/detail/signal_op.hpp:
 _deps/asio-src/asio/include/asio/impl/cancellation_signal.ipp:
 
 _deps/asio-src/asio/include/asio/buffer_registration.hpp:
+
+/usr/include/bits/sigstksz.h:
+
+/usr/include/alloca.h:
 
 /usr/include/c++/15.2.1/pstl/execution_defs.h:
 
@@ -4991,6 +5126,12 @@ _deps/asio-src/asio/include/asio/basic_serial_port.hpp:
 
 /usr/include/c++/15.2.1/bits/refwrap.h:
 
+/usr/include/bits/stat.h:
+
+/usr/include/c++/15.2.1/cmath:
+
+/usr/include/c++/15.2.1/bits/stringfwd.h:
+
 _deps/asio-src/asio/include/asio/awaitable.hpp:
 
 /usr/include/c++/15.2.1/bits/unique_ptr.h:
@@ -5122,6 +5263,8 @@ _deps/asio-src/asio/include/asio/associator.hpp:
 _deps/asio-src/asio/include/asio/detail/reactive_socket_accept_op.hpp:
 
 _deps/asio-src/asio/include/asio/async_result.hpp:
+
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o:
 
 _deps/asio-src/asio/include/asio/basic_deadline_timer.hpp:
 

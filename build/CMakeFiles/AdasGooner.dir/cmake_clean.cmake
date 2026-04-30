@@ -30,6 +30,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/AdasGooner.dir/src/weapons/awp.cpp.o.d"
   "CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.o"
   "CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.o.d"
+  "CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o"
+  "CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o.d"
   "CMakeFiles/AdasGooner.dir/src/weapons/minigun.cpp.o"
   "CMakeFiles/AdasGooner.dir/src/weapons/minigun.cpp.o.d"
   "CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o"

@@ -268,10 +268,24 @@ CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/tomasz/Desktop/adas gooner/src/weapons/rpg.cpp" -o CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.s
 
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o: CMakeFiles/AdasGooner.dir/flags.make
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/weapons/knife.cpp
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o: CMakeFiles/AdasGooner.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o -MF CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o.d -o CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o -c "/home/tomasz/Desktop/adas gooner/src/weapons/knife.cpp"
+
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/tomasz/Desktop/adas gooner/src/weapons/knife.cpp" > CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.i
+
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/tomasz/Desktop/adas gooner/src/weapons/knife.cpp" -o CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.s
+
 CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o: CMakeFiles/AdasGooner.dir/flags.make
 CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/effects/particle_system.cpp
 CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o: CMakeFiles/AdasGooner.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o -MF CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o.d -o CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o -c "/home/tomasz/Desktop/adas gooner/src/effects/particle_system.cpp"
 
 CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.i: cmake_force
@@ -285,7 +299,7 @@ CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.s: cmake_force
 CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o: CMakeFiles/AdasGooner.dir/flags.make
 CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/vehicles/vehicle.cpp
 CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o: CMakeFiles/AdasGooner.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o -MF CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o.d -o CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o -c "/home/tomasz/Desktop/adas gooner/src/vehicles/vehicle.cpp"
 
 CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.i: cmake_force
@@ -299,7 +313,7 @@ CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.s: cmake_force
 CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o: CMakeFiles/AdasGooner.dir/flags.make
 CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/vehicles/tank.cpp
 CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o: CMakeFiles/AdasGooner.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o -MF CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o.d -o CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o -c "/home/tomasz/Desktop/adas gooner/src/vehicles/tank.cpp"
 
 CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.i: cmake_force
@@ -313,7 +327,7 @@ CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.s: cmake_force
 CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o: CMakeFiles/AdasGooner.dir/flags.make
 CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o: /home/tomasz/Desktop/adas\ gooner/src/bosses/adas_gooner.cpp
 CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o: CMakeFiles/AdasGooner.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o -MF CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o.d -o CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.o -c "/home/tomasz/Desktop/adas gooner/src/bosses/adas_gooner.cpp"
 
 CMakeFiles/AdasGooner.dir/src/bosses/adas_gooner.cpp.i: cmake_force
@@ -340,6 +354,7 @@ AdasGooner_OBJECTS = \
 "CMakeFiles/AdasGooner.dir/src/weapons/shotgun.cpp.o" \
 "CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o" \
 "CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o" \
+"CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o" \
 "CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o" \
 "CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o" \
 "CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o" \
@@ -362,6 +377,7 @@ AdasGooner: CMakeFiles/AdasGooner.dir/src/weapons/awp.cpp.o
 AdasGooner: CMakeFiles/AdasGooner.dir/src/weapons/shotgun.cpp.o
 AdasGooner: CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o
 AdasGooner: CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o
+AdasGooner: CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o
 AdasGooner: CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o
 AdasGooner: CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o
 AdasGooner: CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o
@@ -370,7 +386,7 @@ AdasGooner: CMakeFiles/AdasGooner.dir/build.make
 AdasGooner: CMakeFiles/AdasGooner.dir/compiler_depend.ts
 AdasGooner: /home/tomasz/Desktop/adas\ gooner/include/linux64/libraylib.a
 AdasGooner: CMakeFiles/AdasGooner.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_19) "Linking CXX executable AdasGooner"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="/home/tomasz/Desktop/adas gooner/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_20) "Linking CXX executable AdasGooner"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/AdasGooner.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

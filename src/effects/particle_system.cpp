@@ -7,7 +7,7 @@ void ParticleSystem::SpawnMuzzleFlash(Vector3 pos) {
     MuzzleFlash f;
     f.position = pos;
     f.lifetime = 0.06f;
-    f.size = 0.3f;
+    f.size = 0.15f;
     flashes.push_back(f);
     
     // Also spawn some sparks around muzzle
@@ -22,7 +22,7 @@ void ParticleSystem::SpawnMuzzleFlash(Vector3 pos) {
         p.lifetime = 0.15f;
         p.maxLifetime = 0.15f;
         p.color = {255, 200, 50, 255};
-        p.size = 0.05f;
+        p.size = 0.03f;
         particles.push_back(p);
     }
 }

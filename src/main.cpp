@@ -22,6 +22,7 @@
 #include "weapons/rpg.hpp"
 #include "vehicles/tank.hpp"
 #include "hud/menu.hpp" // We'll keep the class but fix it or just use its logic
+#include "effects/particle_system.hpp"
 
 enum class GameState { MENU, LOBBY, GAME, PAUSED };
 
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
   localPlayer.playerId = (int)(GetTime() * 1000);
 
   Map *currentMap = new CityMap();
+  ParticleSystem effects;
 
   // SHADER LOAD
   Shader lighting = LoadShader("../resources/shaders/lighting.vs",
@@ -118,6 +120,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    effects.Update(GetFrameTime());
+
     static float preferredFOV = 70.0f;
     static int worldDetailLevel = 1; // 0 = Low, 1 = High
     float fovToUse = preferredFOV;
@@ -127,12 +131,49 @@ int main(int argc, char *argv[]) {
     localPlayer.camera.fovy = fovToUse;
     
     if (state == GameState::GAME || state == GameState::LOBBY || state == GameState::PAUSED) {
-      if (state == GameState::GAME && !IsCursorHidden())
+      if (state == GameState::GAME && !localPlayer.showInventory && !IsCursorHidden())
         DisableCursor();
-      else if ((state == GameState::LOBBY || state == GameState::PAUSED) && IsCursorHidden())
+      else if ((state == GameState::LOBBY || state == GameState::PAUSED || (state == GameState::GAME && localPlayer.showInventory)) && IsCursorHidden())
         EnableCursor();
         
       if (state == GameState::GAME) {
+          if (IsKeyPressed(KEY_GRAVE)) {
+              localPlayer.showInventory = !localPlayer.showInventory;
+          }
+          if (IsKeyPressed(KEY_Q)) {
+              if (localPlayer.previousWeapon && localPlayer.previousWeapon != localPlayer.currentWeapon) {
+                  Weapon* temp = localPlayer.currentWeapon;
+                  localPlayer.currentWeapon = localPlayer.previousWeapon;
+                  localPlayer.previousWeapon = temp;
+              }
+          }
+          auto cycleWeapon = [&](const std::vector<int>& validSizes) {
+              int currentIndex = -1;
+              for (size_t i = 0; i < localPlayer.inventory.size(); i++) {
+                  if (localPlayer.inventory[i] == localPlayer.currentWeapon) {
+                      currentIndex = (int)i; break;
+                  }
+              }
+              // If not matched, default to end to scan from zero
+              if (currentIndex == -1) currentIndex = localPlayer.inventory.size() - 1;
+              
+              for (size_t i = 1; i <= localPlayer.inventory.size(); i++) {
+                  size_t idx = (currentIndex + i) % localPlayer.inventory.size();
+                  auto* w = localPlayer.inventory[idx];
+                  if (std::find(validSizes.begin(), validSizes.end(), w->magSize) != validSizes.end()) {
+                      if (localPlayer.currentWeapon != w) {
+                          localPlayer.previousWeapon = localPlayer.currentWeapon;
+                          localPlayer.currentWeapon = w;
+                      }
+                      break;
+                  }
+              }
+          };
+
+          if (IsKeyPressed(KEY_ONE)) cycleWeapon({30, 200});
+          if (IsKeyPressed(KEY_TWO)) cycleWeapon({17, 6});
+          if (IsKeyPressed(KEY_THREE)) cycleWeapon({0});
+          if (IsKeyPressed(KEY_FOUR)) cycleWeapon({8, 5, 1});
           // CHEAT CODE LOGIC
           int charPressed = GetCharPressed();
           while (charPressed > 0) {
@@ -192,34 +233,95 @@ int main(int argc, char *argv[]) {
           if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
               auto v = vehicles[localPlayer.vehicleIndex];
               Tank* tank = dynamic_cast<Tank*>(v.get());
-              if (tank && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && tank->CanFireCannon()) {
-                  tank->FireCannon();
-                  Ray cannonRay = {tank->GetBarrelTip(), tank->GetTurretForward()};
-                  float t = -tank->GetBarrelTip().y / tank->GetTurretForward().y;
-                  Vector3 impactPoint = Vector3Add(tank->GetBarrelTip(), Vector3Scale(tank->GetTurretForward(), t));
-                  float closest = 1000.0f;
-                  for (auto& e : enemies) {
-                      auto coll = GetRayCollisionBox(cannonRay, e->GetBoundingBox());
-                      if (coll.hit && coll.distance < closest) { closest = coll.distance; impactPoint = coll.point; }
-                  }
-                  float splashRadius = 15.0f;
-                  for (auto& e : enemies) {
-                      float dist = Vector3Distance(e->position, impactPoint);
-                      if (dist < splashRadius) {
-                          float damageMult = 1.0f - (dist / splashRadius);
-                          e->hp -= tank->cannonDamage * (0.3f + 0.7f * damageMult);
-                          if (e->hp <= 0) localPlayer.AddMoney(150);
+              if (tank) {
+                  // Sync localPlayer position to tank for networking/logic
+                  localPlayer.position = tank->position;
+
+                  if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && tank->CanFireCannon()) {
+                      tank->FireCannon();
+                      Ray cannonRay = {tank->GetBarrelTip(), tank->GetTurretForward()};
+                      
+                      // Perform comprehensive raycast
+                      float closestDist = 2000.0f;
+                      Vector3 impactPoint = Vector3Add(tank->GetBarrelTip(), Vector3Scale(tank->GetTurretForward(), 2000.0f));
+                      
+                      // 1. Check world obstacles
+                      for (const auto& box : currentMap->GetObstacles()) {
+                          auto coll = GetRayCollisionBox(cannonRay, box);
+                          if (coll.hit && coll.distance < closestDist) {
+                              closestDist = coll.distance;
+                              impactPoint = coll.point;
+                          }
+                      }
+                      
+                      // 2. Check enemies
+                      for (auto& e : enemies) {
+                          if (!e->active || e->hp <= 0) continue;
+                          auto coll = GetRayCollisionBox(cannonRay, e->GetBoundingBox());
+                          if (coll.hit && coll.distance < closestDist) {
+                              closestDist = coll.distance;
+                              impactPoint = coll.point;
+                          }
+                      }
+                      
+                      // 3. Ground collision (if nothing hit)
+                      if (closestDist > 1999.0f) {
+                          if (cannonRay.direction.y < 0) {
+                              float t = -cannonRay.position.y / cannonRay.direction.y;
+                              impactPoint = Vector3Add(cannonRay.position, Vector3Scale(cannonRay.direction, t));
+                          }
+                      }
+
+                      // SPAWN EFFECTS
+                      effects.SpawnExplosion(impactPoint);
+                      effects.SpawnBulletTracer(tank->GetBarrelTip(), impactPoint, {255, 150, 50, 255});
+                      effects.SpawnHitSparks(impactPoint, 40);
+                      
+                      // APPLY AOE DAMAGE (Splash)
+                      float splashRadius = 25.0f;
+                      float baseDamage = tank->cannonDamage;
+                      
+                      for (auto& e : enemies) {
+                          if (!e->active || e->hp <= 0) continue;
+                          float dist = Vector3Distance(e->position, impactPoint);
+                          if (dist < splashRadius) {
+                              // Damage falloff
+                              float falloff = 1.0f - (dist / splashRadius);
+                              float totalDamage = baseDamage * (0.3f + 0.7f * falloff);
+                              e->hp -= totalDamage;
+                              if (e->hp <= 0) {
+                                  e->hp = 0;
+                                  localPlayer.AddMoney(250);
+                              }
+                          }
                       }
                   }
               }
           }
 
           // --- WEAPON SHOOTING ---
-          bool isFiring = localPlayer.currentWeapon && (localPlayer.currentWeapon->IsAutomatic() ? IsMouseButtonDown(MOUSE_LEFT_BUTTON) : IsMouseButtonPressed(MOUSE_LEFT_BUTTON));
+          bool isFiring = localPlayer.currentWeapon && !localPlayer.showInventory && (localPlayer.currentWeapon->IsAutomatic() ? IsMouseButtonDown(MOUSE_LEFT_BUTTON) : IsMouseButtonPressed(MOUSE_LEFT_BUTTON));
           if (isFiring && localPlayer.currentWeapon->CanFire() && !localPlayer.inVehicle) {
               localPlayer.currentWeapon->Fire();
+              
+              Vector3 up = {0, 1, 0};
+              Vector3 camRight = Vector3Normalize(Vector3CrossProduct(ray.direction, up));
+              Vector3 camUp = Vector3Normalize(Vector3CrossProduct(camRight, ray.direction));
+              
+              Vector3 muzzlePos = Vector3Add(ray.position, Vector3Scale(ray.direction, 1.2f)); // forward
+              muzzlePos = Vector3Add(muzzlePos, Vector3Scale(camRight, 0.4f)); // right offset
+              muzzlePos = Vector3Add(muzzlePos, Vector3Scale(camUp, -0.2f));   // down offset
+              
+              if (localPlayer.currentWeapon->magSize > 0) {
+                  effects.SpawnMuzzleFlash(muzzlePos);
+              }
+
               if (net.mode == NetworkManager::Mode::SERVER) {
-                  float closestDist = 200.0f; Enemy* hitEnemy = nullptr;
+                  float maxDist = 200.0f;
+                  if (localPlayer.currentWeapon->magSize == 0) maxDist = 3.5f;       // Knife
+                  else if (localPlayer.currentWeapon->magSize == 8) maxDist = 40.0f; // Shotgun
+                  
+                  float closestDist = maxDist; Enemy* hitEnemy = nullptr;
                   for (auto& e : enemies) {
                       if (!e->active || e->hp <= 0) continue;
                       BoundingBox box = e->GetBoundingBox();
@@ -228,7 +330,20 @@ int main(int argc, char *argv[]) {
                   }
                   if (hitEnemy) {
                       float oldHp = hitEnemy->hp;
-                      hitEnemy->hp -= localPlayer.currentWeapon->damage; 
+                      float dealtDamage = localPlayer.currentWeapon->damage;
+                      
+                      Vector3 hitPoint = Vector3Add(ray.position, Vector3Scale(ray.direction, closestDist));
+                      if (localPlayer.currentWeapon->magSize > 0) {
+                          effects.SpawnBloodSplash(hitPoint, 8);
+                      }
+                      
+                      // Shotgun damage falloff (starts dropping after 10 meters)
+                      if (localPlayer.currentWeapon->magSize == 8 && closestDist > 10.0f) {
+                          float falloff = 10.0f / closestDist; // Example: at 20m -> 50%, at 40m -> 25% damage
+                          dealtDamage *= falloff;
+                      }
+                      
+                      hitEnemy->hp -= dealtDamage; 
                       if (hitEnemy->hp <= 0) {
                           hitEnemy->hp = 0;
                           if (oldHp > 0) {
@@ -239,6 +354,29 @@ int main(int argc, char *argv[]) {
                               else if (hitEnemy->type == EnemyType::BOSS) reward = 2000;
                               localPlayer.AddMoney(reward);
                           }
+                      }
+                  } else {
+                      // Missed enemy, bullet goes to max distance
+                      if (localPlayer.currentWeapon->magSize > 0) {
+                          Vector3 hitPoint = Vector3Add(ray.position, Vector3Scale(ray.direction, closestDist));
+                          effects.SpawnHitSparks(hitPoint, 5);
+                      }
+                  }
+                  
+                  // Spawn Bullet Tracers
+                  if (localPlayer.currentWeapon->magSize > 0) {
+                      Vector3 tracerEnd = Vector3Add(ray.position, Vector3Scale(ray.direction, closestDist));
+                      if (localPlayer.currentWeapon->magSize == 8) { // Shotgun
+                          effects.SpawnShotgunPelletTrails(muzzlePos, tracerEnd);
+                          for (int i=0; i<3; i++) {
+                              Vector3 randOffset = {(float)GetRandomValue(-200, 200)/100.0f, (float)GetRandomValue(-200, 200)/100.0f, (float)GetRandomValue(-200, 200)/100.0f};
+                              effects.SpawnShotgunPelletTrails(muzzlePos, Vector3Add(tracerEnd, randOffset));
+                          }
+                      } else if (localPlayer.currentWeapon->magSize == 1) { // RPG
+                          effects.SpawnExplosion(tracerEnd);
+                          effects.SpawnHitSparks(tracerEnd, 20);
+                      } else {
+                          effects.SpawnBulletTracer(muzzlePos, tracerEnd);
                       }
                   }
               }
@@ -274,8 +412,8 @@ int main(int argc, char *argv[]) {
               if (localPlayer.money >= cost) {
                   if (newWep) {
                       localPlayer.money -= cost;
-                      if (localPlayer.currentWeapon) delete localPlayer.currentWeapon;
-                      localPlayer.currentWeapon = newWep;
+                      localPlayer.inventory.push_back(newWep);
+                      if (!localPlayer.currentWeapon) localPlayer.currentWeapon = newWep;
                   } else if (buyAmmo) {
                       localPlayer.money -= cost;
                       if (localPlayer.currentWeapon) localPlayer.currentWeapon->RefillAmmo();
@@ -334,7 +472,13 @@ int main(int argc, char *argv[]) {
           }
 
           std::vector<TargetInfo> targets;
-          targets.push_back({ localPlayer.position, &localPlayer.hp, true });
+          // Redirect damage to tank if player is inside
+          int* localTargetHP = &localPlayer.hp;
+          if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
+              localTargetHP = &vehicles[localPlayer.vehicleIndex]->health;
+          }
+          targets.push_back({ localPlayer.position, localTargetHP, true });
+          
           for (auto& [id, data] : net.remotePlayers) {
               if (data.active) targets.push_back({ data.position, &data.hp, true });
           }
@@ -371,7 +515,42 @@ int main(int argc, char *argv[]) {
           }
 
           enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [](const std::shared_ptr<Enemy>& e) { return !e->active; }), enemies.end());
-          for (auto& v : vehicles) v->Update(GetFrameTime());
+          for (auto it = vehicles.begin(); it != vehicles.end(); ) {
+              auto& v = *it;
+              v->Update(GetFrameTime());
+              
+              // --- VEHICLE DESTRUCTION ---
+              if (v->health <= 0) {
+                  effects.SpawnExplosion(v->position);
+                  if (v->isOccupied) {
+                      if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0 && vehicles[localPlayer.vehicleIndex] == v) {
+                          localPlayer.hp = 0; // DIE!
+                          localPlayer.inVehicle = false;
+                          localPlayer.vehicleIndex = -1;
+                      }
+                  }
+                  it = vehicles.erase(it);
+                  continue;
+              }
+
+              // --- TANK CRUSHING LOGIC ---
+              Tank* tank = dynamic_cast<Tank*>(v.get());
+              if (tank && fabsf(tank->speed) > 0.1f) {
+                  BoundingBox tankBox = tank->GetBoundingBox();
+                  for (auto& e : enemies) {
+                      if (!e->active || e->hp <= 0) continue;
+                      if (CheckCollisionBoxes(tankBox, e->GetBoundingBox())) {
+                          float crushDamage = 1000.0f + fabsf(tank->speed) * 4000.0f; // Up to 5000 damage
+                          e->hp -= crushDamage;
+                          if (e->hp <= 0) {
+                              e->hp = 0;
+                              localPlayer.AddMoney(100);
+                          }
+                      }
+                  }
+              }
+              it++;
+          }
           
           std::vector<PlayerSyncData> pSync;
           pSync.push_back({ localPlayer.playerId, localPlayer.hp, localPlayer.money });
@@ -457,10 +636,11 @@ int main(int argc, char *argv[]) {
       if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
           auto v = vehicles[localPlayer.vehicleIndex];
           
-          // Orbit Camera Control (Lowered sensitivity)
+          // Orbit Camera Control (Inverted for correct player feel)
           Vector2 mouseDelta = GetMouseDelta();
-          vehicleCamOrbitH += mouseDelta.x * 0.03f; 
-          vehicleCamOrbitV += mouseDelta.y * 0.03f;
+          vehicleCamOrbitH -= mouseDelta.x * 0.015f; 
+          vehicleCamOrbitV += mouseDelta.y * 0.015f;
+
           if (vehicleCamOrbitV > 1.2f) vehicleCamOrbitV = 1.2f;
           if (vehicleCamOrbitV < -0.1f) vehicleCamOrbitV = -0.1f;
 
@@ -470,7 +650,7 @@ int main(int argc, char *argv[]) {
               v->position.y + sinf(vehicleCamOrbitV) * dist + 8.0f,
               v->position.z - cosf(vehicleCamOrbitV) * cosf(vehicleCamOrbitH) * dist
           };
-          activeCam.target = Vector3Add(v->position, (Vector3){0, 5.0f, 0});
+          activeCam.target = Vector3Add(v->position, (Vector3){0, 4.0f, 0}); // Target the turret height
           activeCam.up = (Vector3){0, 1, 0};
           activeCam.fovy = 70.0f;
 
@@ -478,7 +658,7 @@ int main(int argc, char *argv[]) {
           Tank* tank = dynamic_cast<Tank*>(v.get());
           if (tank) {
               tank->turretRotation = (vehicleCamOrbitH * RAD2DEG) - tank->rotation;
-              tank->barrelPitch = -(vehicleCamOrbitV * RAD2DEG) + 10.0f; // Offset for better aiming
+              tank->barrelPitch = -(vehicleCamOrbitV * RAD2DEG); // Removed offset for precision
           }
       } else if (net.mode == NetworkManager::Mode::SERVER) {
           for (auto& e : enemies) {
@@ -515,6 +695,8 @@ int main(int argc, char *argv[]) {
       for (auto& v : vehicles) v->Draw();
       EndShaderMode();
       
+      effects.Draw();
+      
       if (net.mode == NetworkManager::Mode::SERVER) {
           for (auto& e : enemies) e->Draw();
       } else {
@@ -541,7 +723,15 @@ int main(int argc, char *argv[]) {
       }
 
       for (auto const &[id, data] : net.remotePlayers) {
-        if (data.active) {
+        // Skip drawing player if they are inside a vehicle
+        bool playerInVehicle = false;
+        for (auto& v : vehicles) {
+            if (Vector3Distance(data.position, v->position) < 8.0f && v->isOccupied) {
+                playerInVehicle = true;
+                break;
+            }
+        }
+        if (data.active && !playerInVehicle) {
           DrawCapsule((Vector3){data.position.x, data.position.y - 1.0f,
                                 data.position.z},
                       (Vector3){data.position.x, data.position.y + 1.0f,
@@ -602,7 +792,7 @@ int main(int argc, char *argv[]) {
           DrawRectangle(0, (float)sh/2.0f + radius - 1.0f, sw, sh, BLACK);
           
           // Outer vignette smoothing (rounds the square hole)
-          DrawCircleGradient(Vector2{(float)sw/2.0f, (float)sh/2.0f}, radius + 2.0f, Fade(BLACK, 0), BLACK);
+          DrawCircleGradient((Vector2){(float)sw/2.0f, (float)sh/2.0f}, radius + 2.0f, Fade(BLACK, 0), BLACK);
           
           // Sniper Crosshair
           DrawLine((float)sw/2.0f - radius, (float)sh/2.0f, (float)sw/2.0f + radius, (float)sh/2.0f, BLACK);
@@ -667,9 +857,18 @@ int main(int argc, char *argv[]) {
       }
       
       // PLAYER HP
-      DrawText(TextFormat("PLAYER HP: %d / %d", localPlayer.hp, localPlayer.maxHp), 25, 45, 20, RAYWHITE);
-      DrawRectangle(320, 45, 250, 20, DARKGRAY);
-      DrawRectangle(320, 45, (int)(250 * (localPlayer.hp / (float)localPlayer.maxHp)), 20, RED);
+      DrawText(TextFormat("PLAYER HP: %d / %d", localPlayer.hp, localPlayer.maxHp), 25, 45, 18, RAYWHITE);
+      DrawRectangle(320, 45, 250, 15, DARKGRAY);
+      DrawRectangle(320, 45, (int)(250 * (localPlayer.hp / (float)localPlayer.maxHp)), 15, RED);
+
+      // VEHICLE HP
+      if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
+          auto v = vehicles[localPlayer.vehicleIndex];
+          DrawText(TextFormat("VEHICLE HP: %d / %d", v->health, v->maxHealth), 25, 65, 18, SKYBLUE);
+          DrawRectangle(320, 65, 250, 15, DARKGRAY);
+          DrawRectangle(320, 65, (int)(250 * (v->health / (float)v->maxHealth)), 15, BLUE);
+      }
+
 
       // BASE HP
       DrawText(TextFormat("BASE HP: %d / %d", (int)baseHP, (int)maxBaseHP), 25, 80, 20, GOLD);
@@ -693,7 +892,7 @@ int main(int argc, char *argv[]) {
       DrawText(TextFormat("CASH: $%d", localPlayer.money), 25, 140, 25, GREEN);
 
       // AMMO HUD (bottom-right)
-      if (localPlayer.currentWeapon) {
+      if (localPlayer.currentWeapon && localPlayer.currentWeapon->magSize > 0) {
           auto* w = localPlayer.currentWeapon;
           const char* ammoText = TextFormat("%d / %d", w->currentAmmo, w->magSize);
           const char* reserveText = TextFormat("RESERVE: %d", w->reserveAmmo);
@@ -716,6 +915,59 @@ int main(int argc, char *argv[]) {
               DrawRectangle(sw2 - 220, sh2 - 90, 210, 8, DARKGRAY);
               DrawRectangle(sw2 - 220, sh2 - 90, (int)(210 * progress), 8, YELLOW);
               DrawText("RELOADING...", sw2/2 - 60, sh2/2 + 50, 20, YELLOW);
+          }
+      }
+
+      // --- CS STYLE VERTICAL/HORIZONTAL EQUIPMENT HUD ---
+      if (!localPlayer.showInventory) {
+          int sw = GetScreenWidth();
+          int sh = GetScreenHeight();
+          int eqWidth = 150;
+          int eqHeight = 35;
+          int spacing = 5;
+
+          std::vector<Weapon*> categories[5];
+          for (auto* w : localPlayer.inventory) {
+              if (w->magSize == 30 || w->magSize == 200) categories[1].push_back(w);
+              else if (w->magSize == 17 || w->magSize == 6) categories[2].push_back(w);
+              else if (w->magSize == 0) categories[3].push_back(w);
+              else if (w->magSize == 8 || w->magSize == 5 || w->magSize == 1) categories[4].push_back(w);
+          }
+
+          int numActiveCategories = 0;
+          for (int c = 1; c <= 4; c++) {
+              if (!categories[c].empty()) numActiveCategories++;
+          }
+          
+          int startY = sh / 2 - (numActiveCategories * (eqHeight + spacing)) / 2;
+          int currentY = startY;
+
+          for (int c = 1; c <= 4; c++) {
+              if (categories[c].empty()) continue;
+              
+              for (size_t i = 0; i < categories[c].size(); i++) {
+                  auto* w = categories[c][i];
+                  bool isEquipped = (w == localPlayer.currentWeapon);
+                  
+                  // Same category weapons expand horizontally to the left
+                  Rectangle slot = {(float)(sw - eqWidth - 20 - i * (eqWidth + spacing)), (float)currentY, (float)eqWidth, (float)eqHeight};
+                  
+                  DrawRectangleRec(slot, isEquipped ? Fade(DARKGRAY, 0.9f) : Fade(BLACK, 0.4f));
+                  if (isEquipped) DrawRectangleLinesEx(slot, 2, LIME);
+                  
+                  const char* wName = "WEAPON";
+                  if (w->magSize == 17) wName = "GLOCK";
+                  else if (w->magSize == 30) wName = "AK47";
+                  else if (w->magSize == 6) wName = "REVOLVR";
+                  else if (w->magSize == 8) wName = "SHOTGUN";
+                  else if (w->magSize == 5) wName = "AWP";
+                  else if (w->magSize == 200) wName = "MINIGUN";
+                  else if (w->magSize == 1) wName = "RPG";
+                  else if (w->magSize == 0) wName = "KNIFE";
+                  
+                  DrawText(TextFormat("[%d] %s", c, wName), slot.x + 10, slot.y + 10, 16, isEquipped ? WHITE : GRAY);
+              }
+              currentY += (eqHeight + spacing);
           }
       }
 
@@ -742,25 +994,78 @@ int main(int argc, char *argv[]) {
 
       if (Vector3Distance(localPlayer.position,
                           {standPos.x - 3, 1, standPos.z - 4}) < 4.0f) {
-        DrawText("PRESS [E] TO BUY SMALL KEBAB (+10 HP)",
-                 GetScreenWidth() / 2 - 180, GetScreenHeight() / 2 + 100, 20,
+        DrawText("PRESS [E] TO BUY SMALL KEBAB ($50, +10 HP)",
+                 GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 + 100, 20,
                  GOLD);
-        if (IsKeyPressed(KEY_E))
+        if (IsKeyPressed(KEY_E) && localPlayer.money >= 50 && localPlayer.hp < localPlayer.maxHp) {
+          localPlayer.money -= 50;
           localPlayer.hp = std::min(localPlayer.maxHp, localPlayer.hp + 10);
+        }
       } else if (Vector3Distance(localPlayer.position,
                                  {standPos.x, 1, standPos.z - 4}) < 4.0f) {
-        DrawText("PRESS [E] TO BUY MEDIUM KEBAB (+25 HP)",
-                 GetScreenWidth() / 2 - 180, GetScreenHeight() / 2 + 100, 20,
+        DrawText("PRESS [E] TO BUY MEDIUM KEBAB ($100, +25 HP)",
+                 GetScreenWidth() / 2 - 220, GetScreenHeight() / 2 + 100, 20,
                  GOLD);
-        if (IsKeyPressed(KEY_E))
+        if (IsKeyPressed(KEY_E) && localPlayer.money >= 100 && localPlayer.hp < localPlayer.maxHp) {
+          localPlayer.money -= 100;
           localPlayer.hp = std::min(localPlayer.maxHp, localPlayer.hp + 25);
+        }
       } else if (Vector3Distance(localPlayer.position,
                                  {standPos.x + 3, 1, standPos.z - 4}) < 4.0f) {
-        DrawText("PRESS [E] TO BUY LARGE KEBAB (+50 HP)",
-                 GetScreenWidth() / 2 - 180, GetScreenHeight() / 2 + 100, 20,
+        DrawText("PRESS [E] TO BUY LARGE KEBAB ($150, +50 HP)",
+                 GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 + 100, 20,
                  GOLD);
-        if (IsKeyPressed(KEY_E))
+        if (IsKeyPressed(KEY_E) && localPlayer.money >= 150 && localPlayer.hp < localPlayer.maxHp) {
+          localPlayer.money -= 150;
           localPlayer.hp = std::min(localPlayer.maxHp, localPlayer.hp + 50);
+        }
+      }
+
+      // --- INVENTORY UI ---
+      if (state == GameState::GAME && localPlayer.showInventory) {
+          int sw = GetScreenWidth();
+          int sh = GetScreenHeight();
+          DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.8f));
+          DrawText("INVENTORY", sw / 2 - MeasureText("INVENTORY", 40) / 2, 50, 40, GOLD);
+
+          int startX = sw / 2 - 400;
+          int startY = 150;
+          for (size_t i = 0; i < localPlayer.inventory.size(); i++) {
+              int row = i / 4;
+              int col = i % 4;
+              Rectangle slot = {(float)(startX + col * 200), (float)(startY + row * 150), 180, 120};
+              bool isHovered = CheckCollisionPointRec(GetMousePosition(), slot);
+              bool isEquipped = (localPlayer.currentWeapon == localPlayer.inventory[i]);
+
+              DrawRectangleRec(slot, isEquipped ? Fade(DARKGREEN, 0.6f) : (isHovered ? Fade(GRAY, 0.6f) : Fade(DARKGRAY, 0.6f)));
+              DrawRectangleLinesEx(slot, 2, isEquipped ? LIME : (isHovered ? WHITE : BLACK));
+              
+              const char* wName = "WEAPON";
+              if (localPlayer.inventory[i]->magSize == 17) wName = "GLOCK";
+              else if (localPlayer.inventory[i]->magSize == 30) wName = "AK47";
+              else if (localPlayer.inventory[i]->magSize == 6) wName = "REVOLVER";
+              else if (localPlayer.inventory[i]->magSize == 8) wName = "SHOTGUN";
+              else if (localPlayer.inventory[i]->magSize == 10) wName = "AWP";
+              else if (localPlayer.inventory[i]->magSize == 100) wName = "MINIGUN";
+              else if (localPlayer.inventory[i]->magSize == 1) wName = "RPG";
+              else if (localPlayer.inventory[i]->magSize == 0) wName = "KNIFE";
+
+              DrawText(wName, slot.x + 10, slot.y + 10, 20, WHITE);
+              if (localPlayer.inventory[i]->magSize > 0) {
+                  DrawText(TextFormat("AMMO: %d", localPlayer.inventory[i]->currentAmmo), slot.x + 10, slot.y + 40, 15, RAYWHITE);
+                  DrawText(TextFormat("RES: %d", localPlayer.inventory[i]->reserveAmmo), slot.x + 10, slot.y + 60, 15, LIGHTGRAY);
+              } else {
+                  DrawText("MELEE / NO AMMO", slot.x + 10, slot.y + 40, 15, GRAY);
+              }
+
+              if (isHovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                  if (localPlayer.currentWeapon != localPlayer.inventory[i]) {
+                      localPlayer.previousWeapon = localPlayer.currentWeapon;
+                  }
+                  localPlayer.currentWeapon = localPlayer.inventory[i];
+              }
+          }
+          DrawText("PRESS ~ TO CLOSE", sw / 2 - MeasureText("PRESS ~ TO CLOSE", 20) / 2, sh - 50, 20, LIGHTGRAY);
       }
 
        if (state == GameState::PAUSED) {

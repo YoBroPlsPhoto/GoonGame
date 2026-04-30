@@ -16,6 +16,7 @@ AdasGooner: \
   CMakeFiles/AdasGooner.dir/src/weapons/shotgun.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o \
   CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o \
+  CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o \
   CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o \
   CMakeFiles/AdasGooner.dir/src/vehicles/vehicle.cpp.o \
   CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o \
@@ -96,6 +97,8 @@ CMakeFiles/AdasGooner.dir/src/weapons/shotgun.cpp.o:
 CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o:
 
 CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o:
+
+CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o:
 
 CMakeFiles/AdasGooner.dir/src/effects/particle_system.cpp.o:
 

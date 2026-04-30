@@ -42,7 +42,7 @@ void RPG::DrawViewModel(Camera3D camera) {
     float recoil = (recoilTimer > 0) ? (recoilTimer / 0.4f) * 0.5f : 0.0f;
     
     // RPG sits on shoulder, offset to the right and up
-    rlTranslatef(0.35f, -0.15f + gunBob, 0.3f - recoil);
+    rlTranslatef(-0.35f, -0.15f + gunBob, 0.3f - recoil);
 
     // Hand gripping the handle
     DrawCube((Vector3){-0.05f, -0.15f, -0.1f}, 0.14f, 0.14f, 0.16f, {255, 200, 150, 255});

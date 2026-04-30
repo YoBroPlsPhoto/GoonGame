@@ -76,5 +76,4 @@ CMakeFiles/AdasGooner.dir/src/vehicles/tank.cpp.o: \
  /usr/include/c++/15.2.1/tr1/poly_hermite.tcc \
  /usr/include/c++/15.2.1/tr1/poly_laguerre.tcc \
  /usr/include/c++/15.2.1/tr1/riemann_zeta.tcc \
- /home/tomasz/Desktop/adas\ gooner/include/linux64/rlgl.h \
- /usr/include/c++/15.2.1/initializer_list
+ /home/tomasz/Desktop/adas\ gooner/include/linux64/rlgl.h

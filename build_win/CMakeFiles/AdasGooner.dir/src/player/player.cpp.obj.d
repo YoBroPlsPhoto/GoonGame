@@ -10,37 +10,19 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.obj: \
  /usr/x86_64-w64-mingw32/include/_mingw_mac.h \
  /usr/x86_64-w64-mingw32/include/_mingw_secapi.h \
  /usr/x86_64-w64-mingw32/include/sdks/_mingw_ddk.h \
- /home/tomasz/Desktop/adas\ gooner/src/player/../weapons/weapon.hpp \
- /home/tomasz/Desktop/adas\ gooner/include/win/raymath.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/math.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/cmath \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/vector \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/requires_hosted.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/x86_64-w64-mingw32/bits/c++config.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/x86_64-w64-mingw32/bits/os_defines.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/x86_64-w64-mingw32/bits/cpu_defines.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/pstl/pstl_config.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_algobase.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/functexcept.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/exception_defines.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/cpp_type_traits.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/version.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/type_traits \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/ext/type_traits.h \
- /usr/x86_64-w64-mingw32/include/math.h \
- /usr/x86_64-w64-mingw32/include/crtdefs.h \
- /usr/x86_64-w64-mingw32/include/corecrt.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/std_abs.h \
- /usr/x86_64-w64-mingw32/include/stdlib.h \
- /usr/x86_64-w64-mingw32/include/corecrt_wstdlib.h \
- /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/limits.h \
- /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/syslimits.h \
- /usr/x86_64-w64-mingw32/include/limits.h \
- /usr/x86_64-w64-mingw32/include/sec_api/stdlib_s.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/stdlib.h \
- /usr/x86_64-w64-mingw32/include/malloc.h \
- /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/mm_malloc.h \
- /usr/x86_64-w64-mingw32/include/errno.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/specfun.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_algobase.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/functexcept.h \
- /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/exception_defines.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/ext/numeric_traits.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_pair.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/move.h \
@@ -55,6 +37,53 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.obj: \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/predefined_ops.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/bit \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/concepts \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/allocator.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/x86_64-w64-mingw32/bits/c++allocator.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/new_allocator.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/new \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/exception.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/memoryfwd.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_construct.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_uninitialized.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/ext/alloc_traits.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/alloc_traits.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_vector.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/initializer_list \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_bvector.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/functional_hash.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/hash_bytes.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/refwrap.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/invoke.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/stl_function.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/backward/binders.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/range_access.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/vector.tcc \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/memory_resource.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/cstddef \
+ /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/stddef.h \
+ /usr/x86_64-w64-mingw32/include/stddef.h \
+ /usr/x86_64-w64-mingw32/include/crtdefs.h \
+ /usr/x86_64-w64-mingw32/include/corecrt.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/uses_allocator.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/uses_allocator_args.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/tuple \
+ /home/tomasz/Desktop/adas\ gooner/src/player/../weapons/weapon.hpp \
+ /home/tomasz/Desktop/adas\ gooner/include/win/raymath.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/math.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/cmath \
+ /usr/x86_64-w64-mingw32/include/math.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/std_abs.h \
+ /usr/x86_64-w64-mingw32/include/stdlib.h \
+ /usr/x86_64-w64-mingw32/include/corecrt_wstdlib.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/limits.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/syslimits.h \
+ /usr/x86_64-w64-mingw32/include/limits.h \
+ /usr/x86_64-w64-mingw32/include/sec_api/stdlib_s.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/stdlib.h \
+ /usr/x86_64-w64-mingw32/include/malloc.h \
+ /usr/lib/gcc/x86_64-w64-mingw32/15.2.0/include/mm_malloc.h \
+ /usr/x86_64-w64-mingw32/include/errno.h \
+ /usr/x86_64-w64-mingw32/include/c++/15.2.0/bits/specfun.h \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/limits \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/tr1/gamma.tcc \
  /usr/x86_64-w64-mingw32/include/c++/15.2.0/tr1/special_function_util.h \
@@ -71,4 +100,5 @@ CMakeFiles/AdasGooner.dir/src/player/player.cpp.obj: \
  /home/tomasz/Desktop/adas\ gooner/src/player/rcamera.h \
  /home/tomasz/Desktop/adas\ gooner/src/player/../weapons/glock.hpp \
  /home/tomasz/Desktop/adas\ gooner/src/player/../weapons/weapon.hpp \
+ /home/tomasz/Desktop/adas\ gooner/src/player/../weapons/knife.hpp \
  /home/tomasz/Desktop/adas\ gooner/include/win/rlgl.h

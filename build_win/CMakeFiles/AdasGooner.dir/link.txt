@@ -1,3 +1,3 @@
 /usr/bin/cmake -E rm -f CMakeFiles/AdasGooner.dir/objects.a
 /usr/bin/x86_64-w64-mingw32-ar qc CMakeFiles/AdasGooner.dir/objects.a @CMakeFiles/AdasGooner.dir/objects1.rsp
-/usr/bin/x86_64-w64-mingw32-g++ -static-libgcc -static-libstdc++ -static -Wl,--whole-archive CMakeFiles/AdasGooner.dir/objects.a -Wl,--no-whole-archive -o AdasGooner.exe -Wl,--out-implib,libAdasGooner.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/AdasGooner.dir/linkLibs.rsp
+/usr/bin/x86_64-w64-mingw32-g++ -mwindows -static-libgcc -static-libstdc++ -static -mwindows -Wl,--whole-archive CMakeFiles/AdasGooner.dir/objects.a -Wl,--no-whole-archive -o AdasGooner.exe -Wl,--out-implib,libAdasGooner.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/AdasGooner.dir/linkLibs.rsp

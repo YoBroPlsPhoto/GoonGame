@@ -4,7 +4,7 @@
 #include <cmath>
 
 Shotgun::Shotgun() {
-    damage = 30; // per pellet, 8 pellets = 240 max
+    damage = 250; // Massively buffed for impact
     attackCooldown = 0.8f;
     currentCooldown = 0.0f;
     recoilTimer = 0.0f;
@@ -44,7 +44,7 @@ void Shotgun::DrawViewModel(Camera3D camera) {
 
     float recoil = (recoilTimer > 0) ? (recoilTimer / 0.25f) * 0.3f : 0.0f;
     
-    rlTranslatef(0.3f, -0.3f + gunBob, 0.4f - recoil);
+    rlTranslatef(-0.3f, -0.3f + gunBob, 0.4f - recoil);
 
     // Hand
     DrawCube((Vector3){0, -0.12f, -0.05f}, 0.14f, 0.14f, 0.18f, {255, 200, 150, 255});

@@ -1032,4 +1032,5 @@ CMakeFiles/AdasGooner.dir/src/main.cpp.obj: \
  /home/tomasz/Desktop/adas\ gooner/src/vehicles/tank.hpp \
  /home/tomasz/Desktop/adas\ gooner/src/vehicles/vehicle.hpp \
  /home/tomasz/Desktop/adas\ gooner/src/hud/menu.hpp \
- /home/tomasz/Desktop/adas\ gooner/src/enemies/enemy.hpp
+ /home/tomasz/Desktop/adas\ gooner/src/enemies/enemy.hpp \
+ /home/tomasz/Desktop/adas\ gooner/src/effects/particle_system.hpp

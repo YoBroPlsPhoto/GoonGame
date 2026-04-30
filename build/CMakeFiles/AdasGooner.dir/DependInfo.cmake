@@ -22,6 +22,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/tomasz/Desktop/adas gooner/src/weapons/ak47.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/ak47.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/ak47.cpp.o.d"
   "/home/tomasz/Desktop/adas gooner/src/weapons/awp.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/awp.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/awp.cpp.o.d"
   "/home/tomasz/Desktop/adas gooner/src/weapons/glock.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.o.d"
+  "/home/tomasz/Desktop/adas gooner/src/weapons/knife.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.o.d"
   "/home/tomasz/Desktop/adas gooner/src/weapons/minigun.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/minigun.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/minigun.cpp.o.d"
   "/home/tomasz/Desktop/adas gooner/src/weapons/revolver.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/revolver.cpp.o.d"
   "/home/tomasz/Desktop/adas gooner/src/weapons/rpg.cpp" "CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o" "gcc" "CMakeFiles/AdasGooner.dir/src/weapons/rpg.cpp.o.d"

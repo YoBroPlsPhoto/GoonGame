@@ -116,8 +116,8 @@ CityMap::CityMap() {
   }
 
   // --- KEBAB STAND OBSTACLES (Ground Floor) ---
-  // Stand box at (15, 0, 160)
-  obstacles.push_back({{bp.x + 10, 0, bp.z + 5}, {bp.x + 20, 3, bp.z + 15}});
+  // Stand box at (15, 0, bp.z + 10) width: 8 depth: 4 height: 2.5
+  obstacles.push_back({{bp.x + 11, 0, bp.z + 8}, {bp.x + 19, 2.5f, bp.z + 12}});
   
   // Tank Terminal box at (15, 0, 120)
   obstacles.push_back({{14.0f, 0, 119.0f}, {16.0f, 3, 121.0f}});
@@ -327,20 +327,26 @@ void CityMap::DrawMainBase() {
 
   // --- KEBAB STAND (Ground Floor) ---
   Vector3 standPos = {bp.x + 15, 0, bp.z + 10};
-  DrawCube((Vector3){standPos.x, 1.5f, standPos.z}, 10, 3, 10,
-           (Color){128, 0, 0, 254}); // Solid Maroon Matte
-  DrawCube((Vector3){standPos.x, 3.2f, standPos.z}, 12, 0.2f, 12,
-           (Color){255, 255, 0, 254}); // Yellow Matte
-  DrawText3D("TURKISH KEBAB",
-             (Vector3){standPos.x - 3, 3.5f, standPos.z - 5.1f}, 1, 0.5f, GOLD);
+  
+  // Base counter
+  DrawCube((Vector3){standPos.x, 1.0f, standPos.z}, 8.0f, 2.0f, 4.0f, (Color){128, 0, 0, 254}); 
+  // Counter top
+  DrawCube((Vector3){standPos.x, 2.05f, standPos.z}, 8.2f, 0.1f, 4.2f, LIGHTGRAY);
+  
+  // Roof supporting poles
+  DrawCylinder((Vector3){standPos.x - 3.8f, 2.0f, standPos.z - 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
+  DrawCylinder((Vector3){standPos.x + 3.8f, 2.0f, standPos.z - 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
+  DrawCylinder((Vector3){standPos.x - 3.8f, 2.0f, standPos.z + 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
+  DrawCylinder((Vector3){standPos.x + 3.8f, 2.0f, standPos.z + 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
+  
+  // Roof
+  DrawCube((Vector3){standPos.x, 4.0f, standPos.z}, 9.0f, 0.2f, 5.0f, (Color){255, 200, 0, 254}); 
+  DrawText3D("TURKISH KEBAB", (Vector3){standPos.x - 2.5f, 4.2f, standPos.z - 2.6f}, 0.4f, 0.1f, GOLD);
 
-  // The items
-  DrawCylinder((Vector3){standPos.x - 3, 1.6f, standPos.z - 4}, 0.5f, 0.5f, 1,
-               8, (Color){255, 165, 0, 254});
-  DrawCylinder((Vector3){standPos.x, 1.6f, standPos.z - 4}, 0.7f, 0.7f, 1.5f, 8,
-               (Color){255, 165, 0, 254});
-  DrawCylinder((Vector3){standPos.x + 3, 1.6f, standPos.z - 4}, 1.0f, 1.0f, 2,
-               8, (Color){255, 165, 0, 254});
+  // The kebabs (vertical meat spits)
+  DrawCylinderEx((Vector3){standPos.x - 2.0f, 2.1f, standPos.z}, (Vector3){standPos.x - 2.0f, 3.3f, standPos.z}, 0.3f, 0.3f, 16, (Color){200, 100, 0, 254});
+  DrawCylinderEx((Vector3){standPos.x, 2.1f, standPos.z}, (Vector3){standPos.x, 3.6f, standPos.z}, 0.45f, 0.45f, 16, (Color){210, 110, 0, 254});
+  DrawCylinderEx((Vector3){standPos.x + 2.0f, 2.1f, standPos.z}, (Vector3){standPos.x + 2.0f, 3.9f, standPos.z}, 0.6f, 0.6f, 16, (Color){220, 120, 0, 254});
 
   // --- WEAPON SCREEN (ULTRA WIDE GRID) ---
   Vector3 screenPos = {bp.x - 24.5f, 5, bp.z};

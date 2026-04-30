@@ -42,7 +42,7 @@ void Glock::DrawViewModel(Camera3D camera) {
 
     float recoil = (recoilTimer > 0) ? (recoilTimer / 0.15f) * 0.15f : 0.0f;
     
-    rlTranslatef(0.3f, -0.25f + gunBob, 0.4f - recoil); 
+    rlTranslatef(-0.3f, -0.25f + gunBob, 0.4f - recoil); 
 
     // Hand
     DrawCube((Vector3){0, -0.1f, -0.05f}, 0.12f, 0.12f, 0.15f, {255, 200, 150, 255});

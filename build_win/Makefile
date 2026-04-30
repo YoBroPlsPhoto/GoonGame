@@ -505,6 +505,30 @@ src/weapons/glock.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/AdasGooner.dir/build.make CMakeFiles/AdasGooner.dir/src/weapons/glock.cpp.s
 .PHONY : src/weapons/glock.cpp.s
 
+src/weapons/knife.obj: src/weapons/knife.cpp.obj
+.PHONY : src/weapons/knife.obj
+
+# target to build an object file
+src/weapons/knife.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/AdasGooner.dir/build.make CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.obj
+.PHONY : src/weapons/knife.cpp.obj
+
+src/weapons/knife.i: src/weapons/knife.cpp.i
+.PHONY : src/weapons/knife.i
+
+# target to preprocess a source file
+src/weapons/knife.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/AdasGooner.dir/build.make CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.i
+.PHONY : src/weapons/knife.cpp.i
+
+src/weapons/knife.s: src/weapons/knife.cpp.s
+.PHONY : src/weapons/knife.s
+
+# target to generate assembly for a file
+src/weapons/knife.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/AdasGooner.dir/build.make CMakeFiles/AdasGooner.dir/src/weapons/knife.cpp.s
+.PHONY : src/weapons/knife.cpp.s
+
 src/weapons/minigun.obj: src/weapons/minigun.cpp.obj
 .PHONY : src/weapons/minigun.obj
 
@@ -656,6 +680,9 @@ help:
 	@echo "... src/weapons/glock.obj"
 	@echo "... src/weapons/glock.i"
 	@echo "... src/weapons/glock.s"
+	@echo "... src/weapons/knife.obj"
+	@echo "... src/weapons/knife.i"
+	@echo "... src/weapons/knife.s"
 	@echo "... src/weapons/minigun.obj"
 	@echo "... src/weapons/minigun.i"
 	@echo "... src/weapons/minigun.s"

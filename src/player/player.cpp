@@ -3,6 +3,7 @@
 #include "rcamera.h"
 #include <cmath>
 #include "../weapons/glock.hpp"
+#include "../weapons/knife.hpp"
 
 Player::Player(Vector3 startPos, int id) : position(startPos), hp(100), maxHp(100), money(0), currentWeapon(nullptr), playerId(id) {
     height = 2.0f;
@@ -21,13 +22,17 @@ Player::Player(Vector3 startPos, int id) : position(startPos), hp(100), maxHp(10
     camera.projection = CAMERA_PERSPECTIVE;
 
     currentWeapon = new Glock();
+    inventory.push_back(currentWeapon);
+    inventory.push_back(new Knife());
 }
 
 Player::~Player() {
-    if (currentWeapon) {
-        delete currentWeapon;
-        currentWeapon = nullptr;
+    for (auto* weapon : inventory) {
+        delete weapon;
     }
+    inventory.clear();
+    currentWeapon = nullptr;
+    previousWeapon = nullptr;
 }
 
 void Player::Update() {
@@ -61,7 +66,7 @@ void Player::Update() {
 
     if (currentWeapon) {
         bool isMoving = Vector2Length(GetMouseDelta()) > 0 || IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D);
-        currentWeapon->Update(GetFrameTime(), isGrounded, GetMouseDelta(), isSprinting, isMoving);
+        currentWeapon->Update(GetFrameTime(), isGrounded, showInventory ? (Vector2){0,0} : GetMouseDelta(), isSprinting, isMoving);
         currentWeapon->UpdateReload(GetFrameTime());
         currentWeapon->CheckAutoReload();
         if (IsKeyPressed(KEY_R)) currentWeapon->StartReload();
@@ -69,7 +74,7 @@ void Player::Update() {
 }
 
 void Player::HandleMovement() {
-    Vector2 mouseDelta = GetMouseDelta();
+    Vector2 mouseDelta = showInventory ? (Vector2){0, 0} : GetMouseDelta();
     UpdateCameraPro(&camera, 
         (Vector3){ 0, 0, 0 }, 
         (Vector3){ mouseDelta.x * 0.05f, mouseDelta.y * 0.05f, 0 }, 
@@ -82,6 +87,9 @@ void Player::HandleMovement() {
     
     isSprinting = IsKeyDown(KEY_LEFT_SHIFT);
     float currentSpeed = speed * (isSprinting ? sprintMultiplier : 1.0f);
+    if (currentWeapon && currentWeapon->magSize == 0) {
+        currentSpeed *= 1.3f; // 30% speed boost for knife
+    }
 
     // Use WASD for local player
     if (IsKeyDown(KEY_W)) { moveTarget.x += forward.x; moveTarget.z += forward.z; }
