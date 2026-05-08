@@ -5,7 +5,7 @@
 #include <vector>
 #include "../player/player.hpp"
 
-enum class EnemyType { MELEE, SHOOTER, FAST, TANK, BOSS, MINION, ELITE, GIGA_TANK, KAMIKAZE };
+enum class EnemyType { MELEE, SHOOTER, FAST, TANK, BOSS, MINION, ELITE, GIGA_TANK, KAMIKAZE, GIBON_BOSS, GANG_BOSS, ADAS_PRIME };
 enum class WeaponType { KATANA, MACHETE, PISTOL, SHOTGUN, EXPLOSIVE };
 
 struct TargetInfo {
@@ -37,6 +37,10 @@ public:
     virtual void DrawHUD(Camera3D camera);
     virtual void HandleCollision(BoundingBox box);
     virtual BoundingBox GetBoundingBox();
+
+    virtual bool RayHit(Ray ray, float& outDist);
+    virtual void TakeDamage(int damage);
+    virtual void TakeAOEDamage(Vector3 center, float radius, int maxDamage);
 
     float attackTimer;
     float walkTimer; // To keep track of movement phase

@@ -24,6 +24,10 @@ Enemy::Enemy(Vector3 startPos, EnemyType t, WeaponType w, int enemyId) {
         speed = 0.05f; hp = 1500; color = DARKGREEN; attackCooldown = 2.5f;
     } else if (type == EnemyType::KAMIKAZE) {
         speed = 0.8f; hp = 30; color = ORANGE; attackCooldown = 0.1f;
+    } else if (type == EnemyType::GIBON_BOSS) {
+        speed = 0.05f; hp = 100000; color = {80, 200, 50, 255}; attackCooldown = 1.5f;
+    } else if (type == EnemyType::GANG_BOSS) {
+        speed = 0.12f; hp = 125000; color = {50, 50, 50, 255}; attackCooldown = 1.8f;
     }
     maxHp = hp;
 
@@ -52,7 +56,7 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     for (const auto& p : players) {
         if (!p.active || (p.hp && *p.hp <= 0)) continue;
         float d = Vector3Distance(p.pos, position);
-        if (d < 15.0f && d < closestDist) {
+        if (d < 35.0f && d < closestDist) { // Increased detection range
             closestDist = d;
             targetPos = p.pos;
             targetHp = p.hp;
@@ -60,21 +64,33 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
         }
     }
 
-    Vector3 direction = Vector3Subtract(targetPos, position);
-    direction.y = 0;
-    float dist = Vector3Length(direction);
+    // Bosses should NOT follow the player, they only face them to attack
+    Vector3 moveTarget = targetPos;
+    if (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS || 
+        type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME) {
+        moveTarget = basePos; // Always move towards base
+    }
 
-    // Stop distance: 27m for base, 1.5m for player
-    float stopDist = targetingPlayer ? 1.5f : ((type == EnemyType::SHOOTER || type == EnemyType::BOSS) ? 40.0f : 27.0f);
+    Vector3 direction = Vector3Subtract(targetPos, position); // For facing/attacking
+    Vector3 moveDirection = Vector3Subtract(moveTarget, position); // For moving
+    direction.y = 0;
+    moveDirection.y = 0;
+    
+    float dist = Vector3Length(direction);
+    float moveDist = Vector3Length(moveDirection);
+
+    // Stop distance: 28m for base (don't enter!), 1.5m for player
+    float stopDist = targetingPlayer ? 1.5f : ((type == EnemyType::SHOOTER || type == EnemyType::BOSS) ? 40.0f : 28.0f);
+    if (!targetingPlayer && moveDist < 28.0f) moveDist = 0; // Strict base boundary
 
     float dt = GetFrameTime();
     float timeScale = dt * 60.0f;
 
     isMoving = false;
-    if (dist > stopDist) {
+    if (moveDist > stopDist) {
         isMoving = true;
-        Vector3 moveDir = Vector3Normalize(direction);
-        angle = atan2f(moveDir.x, moveDir.z) * RAD2DEG;
+        Vector3 moveDir = Vector3Normalize(moveDirection);
+        angle = atan2f(direction.x, direction.z) * RAD2DEG; // Face target (player or base)
         position.x += moveDir.x * speed * timeScale;
         position.z += moveDir.z * speed * timeScale;
         velocity = {moveDir.x * speed * timeScale, 0, moveDir.z * speed * timeScale};
@@ -114,7 +130,12 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
 void Enemy::Draw() {
     if (!active) return;
     
-    float scale = (type == EnemyType::BOSS) ? 4.5f : 1.5f;
+    float scale = 1.2f; // Player size
+    if (type == EnemyType::BOSS) scale = 2.0f;
+    else if (type == EnemyType::MINION) scale = 0.7f;
+    else if (type == EnemyType::KAMIKAZE) scale = 0.9f;
+    else if (type == EnemyType::GIGA_TANK) scale = 2.5f;
+    else if (type == EnemyType::ELITE) scale = 1.5f;
     float walkAnim = isMoving ? sinf(walkTimer * speed * 40.0f) : 0.0f;
     float attackAnim = (attackTimer > 0) ? (1.0f - attackTimer / (attackCooldown * 0.5f)) : 0.0f;
     
@@ -233,7 +254,13 @@ void Enemy::DrawHUD(Camera3D camera) {
     float viewDist = (type == EnemyType::BOSS) ? 400.0f : 150.0f;
     if (Vector3Distance(position, camera.position) > viewDist) return;
 
-    float scale = (type == EnemyType::BOSS) ? 4.5f : 1.5f;
+    float scale = 1.2f;
+    if (type == EnemyType::BOSS) scale = 2.0f;
+    else if (type == EnemyType::MINION) scale = 0.7f;
+    else if (type == EnemyType::KAMIKAZE) scale = 0.9f;
+    else if (type == EnemyType::GIGA_TANK) scale = 2.5f;
+    else if (type == EnemyType::ELITE) scale = 1.5f;
+
     Vector3 barPos = { position.x, position.y + 2.5f * scale, position.z };
     
     // Prevent rendering HUD for enemies behind the camera
@@ -241,7 +268,7 @@ void Enemy::DrawHUD(Camera3D camera) {
     Vector3 camFwd = Vector3Subtract(camera.target, camera.position);
     if (Vector3DotProduct(toEnemy, camFwd) < 0) return;
 
-    float hpPercent = (float)hp / maxHp;
+    float hpPercent = std::max(0.0f, std::min(1.0f, (float)hp / maxHp));
     Vector2 screenPos = GetWorldToScreen(barPos, camera);
     
     // Smaller HP bar
@@ -262,7 +289,13 @@ void Enemy::HandleCollision(BoundingBox box) {
 
     BoundingBox enemyBox = GetBoundingBox();
     if (CheckCollisionBoxes(enemyBox, box)) {
-        float scale = (type == EnemyType::BOSS) ? 4.5f : 1.5f;
+        float scale = 1.2f;
+        if (type == EnemyType::BOSS) scale = 2.0f;
+        else if (type == EnemyType::MINION) scale = 0.7f;
+        else if (type == EnemyType::KAMIKAZE) scale = 0.9f;
+        else if (type == EnemyType::GIGA_TANK) scale = 2.5f;
+        else if (type == EnemyType::ELITE) scale = 1.5f;
+        
         float pushDist = 0.72f * scale; // Adjust push distance based on enemy size
 
         float dx1 = enemyBox.max.x - box.min.x;
@@ -280,9 +313,37 @@ void Enemy::HandleCollision(BoundingBox box) {
 }
 
 BoundingBox Enemy::GetBoundingBox() {
-    float scale = (type == EnemyType::BOSS) ? 4.5f : 1.5f;
+    float scale = 1.2f;
+    if (type == EnemyType::BOSS) scale = 2.0f;
+    else if (type == EnemyType::MINION) scale = 0.7f;
+    else if (type == EnemyType::KAMIKAZE) scale = 0.9f;
+    else if (type == EnemyType::GIGA_TANK) scale = 2.5f;
+    else if (type == EnemyType::ELITE) scale = 1.5f;
+    
+    float r = 0.75f * scale;
+    float yMax = position.y + 2.45f * scale;
+    yMax = std::max(yMax, position.y + 0.5f);
+    
     return (BoundingBox){
-        (Vector3){ position.x - 0.75f * scale, position.y, position.z - 0.75f * scale },
-        (Vector3){ position.x + 0.75f * scale, position.y + 2.45f * scale, position.z + 0.75f * scale }
+        (Vector3){ position.x - r, position.y, position.z - r },
+        (Vector3){ position.x + r, yMax, position.z + r }
     };
+}
+
+bool Enemy::RayHit(Ray ray, float& outDist) {
+    RayCollision hit = GetRayCollisionBox(ray, GetBoundingBox());
+    if (hit.hit) { outDist = hit.distance; return true; }
+    return false;
+}
+
+void Enemy::TakeDamage(int amt) {
+    hp -= amt;
+}
+
+void Enemy::TakeAOEDamage(Vector3 center, float radius, int maxDamage) {
+    float dist = Vector3Distance(position, center);
+    if (dist < radius) {
+        float falloff = 1.0f - (dist / radius);
+        TakeDamage((int)(maxDamage * (0.3f + 0.7f * falloff)));
+    }
 }

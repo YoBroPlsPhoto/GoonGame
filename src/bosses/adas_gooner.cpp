@@ -112,7 +112,7 @@ void AdasGooner::Draw() {
     if (cutsceneState == CutsceneState::WARDROBE_CLOSED) return;
 
     // --- DRAW ADAS GOONER ---
-    float scale = 9.0f; // Absolutely giant
+    float scale = 2.5f; // Scaled down to player-like size
     float animWalk = isMoving ? sinf(walkTimer * speed * 30.0f) : 0.0f;
     float animAttack = (attackTimer > 0) ? (1.0f - attackTimer / 1.5f) : 0.0f; // Slower cooldown logic mapped
     
@@ -182,8 +182,8 @@ void AdasGooner::Draw() {
 BoundingBox AdasGooner::GetBoundingBox() {
     // Ponieważ scale = 9.0f, musimy to uwzględnić w boksie kolizji.
     // Boss ma ok. 2.5 jednostek wysokości w skali lokalnej, co daje ~22 jednostki w świecie.
-    float halfWidth = 4.0f; 
-    float height = 22.0f;
+    float halfWidth = 1.5f; 
+    float height = 5.0f;
 
     return (BoundingBox){
         (Vector3){ position.x - halfWidth, position.y, position.z - halfWidth },

@@ -15,7 +15,7 @@ Tank::Tank(Vector3 pos) : Vehicle(pos, VehicleType::SUV) {
     barrelPitch = 0.0f;
     cannonCooldown = 0.0f;
     mgCooldown = 0.0f;
-    cannonDamage = 15000; // Buffed damage for a tank
+    cannonDamage = 1000; // Balanced damage for a tank
     mgDamage = 65;
     trackLAnimation = 0.0f;
     trackRAnimation = 0.0f;

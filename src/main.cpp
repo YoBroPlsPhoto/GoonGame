@@ -1,22 +1,22 @@
 #include "raylib.h"
 #include "map/city_map.hpp"
-#include "map/desert_map.hpp"
+#include <time.h>
 #include "map/map.hpp"
 #include "network/network_manager.hpp"
 #include "player/player.hpp"
 #include "enemies/enemy.hpp"
 #include "raymath.h"
 #include "rlgl.h"
-#include <iostream>
 #include <vector>
 #include <algorithm>
-#include <random>
 #include <memory>
 #include "bosses/adas_gooner.hpp"
+#include "bosses/gibon_rzygacz.hpp"
+#include "bosses/gang_boss.hpp"
+#include "bosses/adas_prime.hpp"
 #include "weapons/ak47.hpp"
 #include "weapons/minigun.hpp"
 #include "weapons/awp.hpp"
-#include "weapons/glock.hpp"
 #include "weapons/revolver.hpp"
 #include "weapons/shotgun.hpp"
 #include "weapons/rpg.hpp"
@@ -29,6 +29,10 @@ enum class GameState { MENU, LOBBY, GAME, PAUSED };
 int main(int argc, char *argv[]) {
   SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
   InitWindow(1280, 720, "AdasGooner - NYC Ultra Graphics");
+  SetRandomSeed(time(NULL));
+  InitAudioDevice();
+  Music goonMusic = LoadMusicStream("../audio/goon.mp3");
+  bool goonMusicPlaying = false;
   SetExitKey(KEY_NULL);
 
   NetworkManager net;
@@ -103,10 +107,55 @@ int main(int argc, char *argv[]) {
   const char cheatCode[] = "goon";
   const char moneyCheat[] = "cash";
   static int moneyIdx = 0;
+  const char gibonCheat[] = "gibon";
+  static int gibonIdx = 0;
+  const char gangCheat[] = "gangbang";
+  static int gangIdx = 0;
 
   while (!shouldExit && !WindowShouldClose()) {
     bool shopNearby = false;
     net.Update();
+
+    bool inCutscene = false;
+    Vector3 bossPos = {0};
+    std::shared_ptr<Enemy> activeBoss = nullptr;
+    
+    if (state == GameState::GAME || state == GameState::PAUSED) {
+        if (net.mode == NetworkManager::Mode::SERVER) {
+            for (auto& e : enemies) {
+                if (e->type == EnemyType::BOSS) {
+                    auto boss = std::dynamic_pointer_cast<AdasGooner>(e);
+                    if (boss && boss->cutsceneState != CutsceneState::FINISHED) {
+                        inCutscene = true; bossPos = boss->wardrobePos; activeBoss = boss; break;
+                    }
+                }
+                if (e->type == EnemyType::GIBON_BOSS) {
+                    auto gibon = std::dynamic_pointer_cast<GibonRzygacz>(e);
+                    if (gibon && gibon->gibonState != GibonState::FINISHED_FALLING) {
+                        inCutscene = true; bossPos = gibon->position; activeBoss = gibon; break;
+                    }
+                }
+                if (e->type == EnemyType::GANG_BOSS) {
+                    auto gang = std::dynamic_pointer_cast<GangBoss>(e);
+                    if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+                        inCutscene = true; bossPos = gang->wardrobePos; activeBoss = gang; break;
+                    }
+                }
+            }
+        } else {
+            for (auto const& [id, e] : net.syncedEnemies) {
+                if (e.type == (int)EnemyType::BOSS && e.attackTimer != (float)(int)CutsceneState::FINISHED) {
+                    inCutscene = true; bossPos = e.pos; break;
+                }
+                if (e.type == (int)EnemyType::GIBON_BOSS && e.attackTimer != (float)(int)GibonState::FINISHED_FALLING) {
+                    inCutscene = true; bossPos = e.pos; break;
+                }
+                if (e.type == (int)EnemyType::GANG_BOSS && e.attackTimer != (float)(int)GangCutscene::FIGHT) {
+                    inCutscene = true; bossPos = e.pos; break;
+                }
+            }
+        }
+    }
 
     if (state == GameState::GAME || state == GameState::PAUSED) {
       if (IsKeyPressed(KEY_ESCAPE)) {
@@ -192,15 +241,36 @@ int main(int argc, char *argv[]) {
               } else {
                   moneyIdx = ((char)charPressed == moneyCheat[0]) ? 1 : 0;
               }
+              
+              if ((char)charPressed == gibonCheat[gibonIdx]) {
+                  gibonIdx++;
+                  if (gibonIdx == 5) { 
+                      currentWave = 20; enemies.clear(); enemiesSpawnedSinceStartOfWave = 0; waveActive = true; gibonIdx = 0; 
+                  }
+              } else {
+                  gibonIdx = ((char)charPressed == gibonCheat[0]) ? 1 : 0;
+              }
+              
+              if ((char)charPressed == gangCheat[gangIdx]) {
+                  gangIdx++;
+                  if (gangIdx == 8) { 
+                      currentWave = 30; enemies.clear(); enemiesSpawnedSinceStartOfWave = 0; waveActive = true; gangIdx = 0; 
+                  }
+              } else {
+                  gangIdx = ((char)charPressed == gangCheat[0]) ? 1 : 0;
+              }
+              
               charPressed = GetCharPressed();
           }
 
-          localPlayer.Update();
-          for (const auto &box : currentMap->GetObstacles())
-            localPlayer.HandleCollision(box);
+          if (!inCutscene) {
+              localPlayer.Update();
+              for (const auto &box : currentMap->GetObstacles())
+                localPlayer.HandleCollision(box);
+          }
       }
         
-      if (state == GameState::GAME) {
+      if (state == GameState::GAME && !inCutscene) {
           // --- INTERACTION & SHOOTING LOGIC ---
           Ray ray = {localPlayer.camera.position,
                      Vector3Normalize(Vector3Subtract(localPlayer.camera.target, localPlayer.camera.position))};
@@ -257,10 +327,10 @@ int main(int argc, char *argv[]) {
                       // 2. Check enemies
                       for (auto& e : enemies) {
                           if (!e->active || e->hp <= 0) continue;
-                          auto coll = GetRayCollisionBox(cannonRay, e->GetBoundingBox());
-                          if (coll.hit && coll.distance < closestDist) {
-                              closestDist = coll.distance;
-                              impactPoint = coll.point;
+                          float hitDist;
+                          if (e->RayHit(cannonRay, hitDist) && hitDist < closestDist) {
+                              closestDist = hitDist;
+                              impactPoint = Vector3Add(cannonRay.position, Vector3Scale(cannonRay.direction, hitDist));
                           }
                       }
                       
@@ -283,16 +353,11 @@ int main(int argc, char *argv[]) {
                       
                       for (auto& e : enemies) {
                           if (!e->active || e->hp <= 0) continue;
-                          float dist = Vector3Distance(e->position, impactPoint);
-                          if (dist < splashRadius) {
-                              // Damage falloff
-                              float falloff = 1.0f - (dist / splashRadius);
-                              float totalDamage = baseDamage * (0.3f + 0.7f * falloff);
-                              e->hp -= totalDamage;
-                              if (e->hp <= 0) {
-                                  e->hp = 0;
-                                  localPlayer.AddMoney(250);
-                              }
+                          float oldHp = e->hp;
+                          e->TakeAOEDamage(impactPoint, splashRadius, (int)baseDamage);
+                          if (oldHp > 0 && e->hp <= 0) {
+                              e->hp = 0;
+                              localPlayer.AddMoney(250);
                           }
                       }
                   }
@@ -324,9 +389,11 @@ int main(int argc, char *argv[]) {
                   float closestDist = maxDist; Enemy* hitEnemy = nullptr;
                   for (auto& e : enemies) {
                       if (!e->active || e->hp <= 0) continue;
-                      BoundingBox box = e->GetBoundingBox();
-                      RayCollision hit = GetRayCollisionBox(ray, box);
-                      if (hit.hit && hit.distance < closestDist) { closestDist = hit.distance; hitEnemy = e.get(); }
+                      float hitDist;
+                      if (e->RayHit(ray, hitDist) && hitDist < closestDist) { 
+                          closestDist = hitDist; 
+                          hitEnemy = e.get(); 
+                      }
                   }
                   if (hitEnemy) {
                       float oldHp = hitEnemy->hp;
@@ -343,7 +410,7 @@ int main(int argc, char *argv[]) {
                           dealtDamage *= falloff;
                       }
                       
-                      hitEnemy->hp -= dealtDamage; 
+                      hitEnemy->TakeDamage((int)dealtDamage); 
                       if (hitEnemy->hp <= 0) {
                           hitEnemy->hp = 0;
                           if (oldHp > 0) {
@@ -351,6 +418,10 @@ int main(int argc, char *argv[]) {
                               if (hitEnemy->type == EnemyType::SHOOTER) reward = 75;
                               else if (hitEnemy->type == EnemyType::FAST) reward = 100;
                               else if (hitEnemy->type == EnemyType::TANK) reward = 250;
+                              else if (hitEnemy->type == EnemyType::MINION) reward = 60;
+                              else if (hitEnemy->type == EnemyType::ELITE) reward = 400;
+                              else if (hitEnemy->type == EnemyType::KAMIKAZE) reward = 150;
+                              else if (hitEnemy->type == EnemyType::GIGA_TANK) reward = 1000;
                               else if (hitEnemy->type == EnemyType::BOSS) reward = 2000;
                               localPlayer.AddMoney(reward);
                           }
@@ -443,17 +514,53 @@ int main(int argc, char *argv[]) {
           if (state == GameState::GAME || state == GameState::PAUSED) {
               static int enemyIdCounter = 0;
               int totalEnemiesThisWave = 5 + currentWave * 4;
-              if (currentWave % 10 == 0) totalEnemiesThisWave = 25; 
-              if (waveActive) {
+              if (currentWave == 10 || currentWave == 20 || currentWave == 30) totalEnemiesThisWave = 1;
+              if (currentWave == 40) totalEnemiesThisWave = 15; // 1 boss + 14 guards
+               if (((int)(GetTime()*60)) % 60 == 0) printf("Wave: %d, Spawned: %d/%d, Size: %d, inCutscene: %d\n", currentWave, enemiesSpawnedSinceStartOfWave, totalEnemiesThisWave, (int)enemies.size(), inCutscene);
+              if (waveActive && !inCutscene) {
                   spawnTimer += GetFrameTime();
                   float spawnDelay = std::max(0.2f, 1.5f - currentWave * 0.05f);
                   if (spawnTimer > spawnDelay && enemiesSpawnedSinceStartOfWave < totalEnemiesThisWave) {
-                      Vector3 spawnPos = { (float)GetRandomValue(-15, 15), 0.1f, -350.0f };
+                      Vector3 spawnPos = { (float)GetRandomValue(-15, 15), 1.0f, -350.0f };
                       EnemyType t = EnemyType::MELEE;
-                      if (currentWave % 10 == 0 && enemiesSpawnedSinceStartOfWave == 0) enemies.push_back(std::make_shared<AdasGooner>(spawnPos, ++enemyIdCounter));
-                      else {
+                      if (currentWave == 40) {
+                          if (enemiesSpawnedSinceStartOfWave == 0) {
+                              Vector3 primeSpawn = { 0.0f, 0.1f, -400.0f };
+                              enemies.push_back(std::make_shared<AdasPrime>(primeSpawn, ++enemyIdCounter));
+                              if (!goonMusicPlaying) { PlayMusicStream(goonMusic); goonMusicPlaying = true; }
+                          } else {
+                              // Spawn guards for the prime
+                              EnemyType gt = (GetRandomValue(0, 1) == 0 ? EnemyType::TANK : EnemyType::ELITE);
+                              auto guard = std::make_shared<Enemy>(spawnPos, gt, WeaponType::SHOTGUN, ++enemyIdCounter);
+                              guard->hp *= 2.0f; guard->maxHp = guard->hp;
+                              enemies.push_back(guard);
+                          }
+                      } else if (currentWave == 30) {
+                          if (enemiesSpawnedSinceStartOfWave == 0) {
+                              Vector3 gangSpawn = { 0.0f, 0.1f, -400.0f };
+                              enemies.push_back(std::make_shared<GangBoss>(gangSpawn, ++enemyIdCounter));
+                          }
+                      } else if (currentWave == 20) {
+                          if (enemiesSpawnedSinceStartOfWave == 0) {
+                              Vector3 gibonLanding = { 0.0f, 0.1f, -450.0f };
+                              enemies.push_back(std::make_shared<GibonRzygacz>(gibonLanding, ++enemyIdCounter));
+                          }
+                      } else if (currentWave == 10) {
+                          if (enemiesSpawnedSinceStartOfWave == 0) {
+                              enemies.push_back(std::make_shared<AdasGooner>(spawnPos, ++enemyIdCounter));
+                              if (!goonMusicPlaying) { PlayMusicStream(goonMusic); goonMusicPlaying = true; }
+                          }
+                      } else {
                            int roll = GetRandomValue(0, 100);
-                           if (roll < 30) t = EnemyType::MELEE; else if (roll < 50) t = EnemyType::SHOOTER; else if (roll < 65) t = EnemyType::FAST; else if (roll < 75) t = EnemyType::TANK; else if (roll < 85) t = EnemyType::MINION; else if (roll < 92) t = EnemyType::ELITE; else if (roll < 97) t = EnemyType::KAMIKAZE; else t = EnemyType::GIGA_TANK;
+                           if (currentWave < 3) {
+                               if (roll < 45) t = EnemyType::MELEE; else if (roll < 75) t = EnemyType::SHOOTER; else t = EnemyType::MINION;
+                           } else if (currentWave < 6) {
+                               if (roll < 30) t = EnemyType::MELEE; else if (roll < 50) t = EnemyType::SHOOTER; else if (roll < 70) t = EnemyType::FAST; else if (roll < 85) t = EnemyType::TANK; else t = EnemyType::MINION;
+                           } else if (currentWave < 12) {
+                               if (roll < 25) t = EnemyType::MELEE; else if (roll < 45) t = EnemyType::SHOOTER; else if (roll < 60) t = EnemyType::FAST; else if (roll < 75) t = EnemyType::TANK; else if (roll < 85) t = EnemyType::MINION; else if (roll < 93) t = EnemyType::ELITE; else t = EnemyType::KAMIKAZE;
+                           } else {
+                               if (roll < 20) t = EnemyType::MELEE; else if (roll < 35) t = EnemyType::SHOOTER; else if (roll < 50) t = EnemyType::FAST; else if (roll < 65) t = EnemyType::TANK; else if (roll < 75) t = EnemyType::MINION; else if (roll < 85) t = EnemyType::ELITE; else if (roll < 95) t = EnemyType::KAMIKAZE; else t = EnemyType::GIGA_TANK;
+                           }
                            WeaponType w = WeaponType::PISTOL;
                            if (t == EnemyType::MELEE) w = (GetRandomValue(0, 1) == 0 ? WeaponType::KATANA : WeaponType::MACHETE); else if (t == EnemyType::SHOOTER) w = WeaponType::PISTOL; else if (t == EnemyType::FAST) w = WeaponType::MACHETE; else if (t == EnemyType::TANK) w = WeaponType::KATANA; else if (t == EnemyType::MINION) w = WeaponType::MACHETE; else if (t == EnemyType::ELITE) w = WeaponType::SHOTGUN; else if (t == EnemyType::KAMIKAZE) w = WeaponType::EXPLOSIVE; else if (t == EnemyType::GIGA_TANK) w = WeaponType::MACHETE;
                            auto newEnemy = std::make_shared<Enemy>(spawnPos, t, w, ++enemyIdCounter);
@@ -463,21 +570,32 @@ int main(int argc, char *argv[]) {
                       enemiesSpawnedSinceStartOfWave++; spawnTimer = 0;
                   }
                   if (enemiesSpawnedSinceStartOfWave >= totalEnemiesThisWave && enemies.empty()) {
-                      waveActive = false; waveWaitTimer = 5.0f;
+                      if (currentWave == 40) {
+                          // GAME END - VICTORY
+                          state = GameState::MENU;
+                          net.gameStarted = false;
+                          currentWave = 1;
+                          if (goonMusicPlaying) { StopMusicStream(goonMusic); goonMusicPlaying = false; }
+                      } else {
+                          waveActive = false; waveWaitTimer = 5.0f;
+                      }
                   }
-              } else {
-                  waveWaitTimer -= GetFrameTime();
-                  if (waveWaitTimer <= 0 && currentWave < 40) { currentWave++; enemiesSpawnedSinceStartOfWave = 0; waveActive = true; }
+                  
+                  if (goonMusicPlaying) UpdateMusicStream(goonMusic);
               }
-          }
 
-          std::vector<TargetInfo> targets;
-          // Redirect damage to tank if player is inside
-          int* localTargetHP = &localPlayer.hp;
-          if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
-              localTargetHP = &vehicles[localPlayer.vehicleIndex]->health;
-          }
-          targets.push_back({ localPlayer.position, localTargetHP, true });
+              if (!waveActive) {
+                  waveWaitTimer -= GetFrameTime();
+                  if (waveWaitTimer <= 0 && currentWave < 999) { currentWave++; enemiesSpawnedSinceStartOfWave = 0; waveActive = true; }
+              }
+
+              std::vector<TargetInfo> targets;
+              // Redirect damage to tank if player is inside
+              int* localTargetHP = &localPlayer.hp;
+              if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
+                  localTargetHP = &vehicles[localPlayer.vehicleIndex]->health;
+              }
+              targets.push_back({ localPlayer.position, localTargetHP, true });
           
           for (auto& [id, data] : net.remotePlayers) {
               if (data.active) targets.push_back({ data.position, &data.hp, true });
@@ -486,10 +604,38 @@ int main(int argc, char *argv[]) {
           std::vector<EnemySync> syncList;
           for (auto& e : enemies) {
               if (state == GameState::GAME || state == GameState::PAUSED) {
-                  e->Update(targets, &baseHP, basePosition);
-                  for (const auto &box : currentMap->GetObstacles()) e->HandleCollision(box);
+                  if (!inCutscene || e == activeBoss) {
+                      e->Update(targets, &baseHP, basePosition);
+                      if (!inCutscene) {
+                          for (const auto &box : currentMap->GetObstacles()) e->HandleCollision(box);
+                      }
+                  }
               }
               syncList.push_back({ e->id, e->position, e->hp, e->maxHp, (int)e->type, (int)e->weapon, e->angle, e->isMoving, e->walkTimer, e->attackTimer });
+              // Override sync fields for Gibon boss (same pattern as AdasGooner)
+              if (e->type == EnemyType::GIBON_BOSS) {
+                  auto gibon = std::dynamic_pointer_cast<GibonRzygacz>(e);
+                  if (gibon) {
+                      syncList.back().attackTimer = (float)(int)gibon->gibonState;
+                      syncList.back().walkTimer = gibon->stateTimer;
+                  }
+              }
+              // Override sync fields for Gang boss
+              if (e->type == EnemyType::GANG_BOSS) {
+                  auto gang = std::dynamic_pointer_cast<GangBoss>(e);
+                  if (gang) {
+                      syncList.back().attackTimer = (float)(int)gang->cutsceneState;
+                      syncList.back().walkTimer = gang->stateTimer;
+                  }
+              }
+              // Override sync fields for Adas Prime
+              if (e->type == EnemyType::ADAS_PRIME) {
+                  auto prime = std::dynamic_pointer_cast<AdasPrime>(e);
+                  if (prime) {
+                      syncList.back().attackTimer = (float)(int)prime->cutsceneState;
+                      syncList.back().walkTimer = prime->cutsceneTimer;
+                  }
+              }
           }
           
           // REMOTE PLAYER SHOOTING (PROCESS ON SERVER)
@@ -506,8 +652,9 @@ int main(int argc, char *argv[]) {
                       if (coll.hit && coll.distance < closest) { closest = coll.distance; hit = e.get(); }
                   }
                   if (hit) {
-                      hit->hp -= 35;
-                      if (hit->hp <= 0) { hit->hp = 0; data.money += 150; } // Reward money to remote player
+                      float oldHp = hit->hp;
+                      hit->TakeDamage(35);
+                      if (hit->hp <= 0 && oldHp > 0) { data.money += 150; } // Reward money to remote player
                   }
                   remoteFireCooldowns[id] = 0.12f;
                   data.firing = false; 
@@ -540,10 +687,10 @@ int main(int argc, char *argv[]) {
                   for (auto& e : enemies) {
                       if (!e->active || e->hp <= 0) continue;
                       if (CheckCollisionBoxes(tankBox, e->GetBoundingBox())) {
-                          float crushDamage = 1000.0f + fabsf(tank->speed) * 4000.0f; // Up to 5000 damage
-                          e->hp -= crushDamage;
-                          if (e->hp <= 0) {
-                              e->hp = 0;
+                          float crushDamage = (1000.0f + fabsf(tank->speed) * 4000.0f) * GetFrameTime();
+                          float oldHp = e->hp;
+                          e->TakeDamage((int)crushDamage);
+                          if (e->hp <= 0 && oldHp > 0) {
                               localPlayer.AddMoney(100);
                           }
                       }
@@ -560,7 +707,8 @@ int main(int argc, char *argv[]) {
 
           net.gameStarted = (state == GameState::GAME || state == GameState::PAUSED);
           net.SendWorldUpdate(baseHP, currentWave, syncList, pSync);
-      } else if (net.mode == NetworkManager::Mode::CLIENT) {
+      }
+  } else if (net.mode == NetworkManager::Mode::CLIENT) {
           baseHP = net.remoteBaseHP;
           currentWave = net.remoteWave;
           if (net.gameStarted && state == GameState::LOBBY) state = GameState::GAME;
@@ -627,8 +775,6 @@ int main(int argc, char *argv[]) {
 
     if (state == GameState::GAME || state == GameState::PAUSED) {
       Camera3D activeCam = localPlayer.camera;
-      bool inCutscene = false;
-      Vector3 bossPos = {0};
 
       static float vehicleCamOrbitH = 0.0f;
       static float vehicleCamOrbitV = 0.3f;
@@ -660,30 +806,93 @@ int main(int argc, char *argv[]) {
               tank->turretRotation = (vehicleCamOrbitH * RAD2DEG) - tank->rotation;
               tank->barrelPitch = -(vehicleCamOrbitV * RAD2DEG); // Removed offset for precision
           }
-      } else if (net.mode == NetworkManager::Mode::SERVER) {
+      }
+
+      // --- GIBON FPS STUTTER EFFECT ---
+      bool gibonStuttering = false;
+      if (net.mode == NetworkManager::Mode::SERVER) {
           for (auto& e : enemies) {
-              if (e->type == EnemyType::BOSS) {
-                  auto boss = std::dynamic_pointer_cast<AdasGooner>(e);
-                  if (boss && boss->cutsceneState != CutsceneState::FINISHED) {
-                      inCutscene = true;
-                      bossPos = boss->wardrobePos;
-                      break;
+              if (e->type == EnemyType::GIBON_BOSS) {
+                  auto gibon = std::dynamic_pointer_cast<GibonRzygacz>(e);
+                  if (gibon && gibon->active) {
+                      if (gibon->isStuttering || gibon->gibonState == GibonState::FALLING || gibon->gibonState == GibonState::IMPACT) {
+                          gibonStuttering = true;
+                      }
                   }
               }
           }
-      } else {
-          for (auto const& [id, e] : net.syncedEnemies) {
-              if (e.type == (int)EnemyType::BOSS && e.attackTimer != (float)(int)CutsceneState::FINISHED) {
-                  inCutscene = true;
-                  bossPos = e.pos; 
-                  break;
-              }
-          }
+      }
+      if (gibonStuttering) {
+          // Simulate FPS drop by burning CPU time
+          double waitUntil = GetTime() + 0.04 + (double)(rand() % 60) / 1000.0;
+          while (GetTime() < waitUntil) { /* spin */ }
       }
 
       if (inCutscene) {
-          activeCam.position = Vector3Add(bossPos, (Vector3){-15.0f, 15.0f, 25.0f});
-          activeCam.target = Vector3Add(bossPos, (Vector3){0, 10.0f, 0});
+          // Check if it's a Gibon cutscene (falling from sky) - use different camera angle
+          bool isGibonCutscene = false;
+          if (net.mode == NetworkManager::Mode::SERVER) {
+              for (auto& e : enemies) {
+                  if (e->type == EnemyType::GIBON_BOSS) {
+                      auto gibon = std::dynamic_pointer_cast<GibonRzygacz>(e);
+                      if (gibon && gibon->gibonState != GibonState::FINISHED_FALLING) {
+                          isGibonCutscene = true;
+                          bossPos = gibon->position;
+                      }
+                  }
+              }
+          } else {
+              for (auto const& [id, e] : net.syncedEnemies) {
+                  if (e.type == (int)EnemyType::GIBON_BOSS) { isGibonCutscene = true; bossPos = e.pos; }
+              }
+          }
+          
+          bool isGangCutscene = false;
+          if (net.mode == NetworkManager::Mode::SERVER) {
+              for (auto& e : enemies) {
+                  if (e->type == EnemyType::GANG_BOSS) {
+                      auto gang = std::dynamic_pointer_cast<GangBoss>(e);
+                      if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+                          isGangCutscene = true;
+                          bossPos = gang->wardrobePos;
+                      }
+                  }
+              }
+          } else {
+              for (auto const& [id, e] : net.syncedEnemies) {
+                  if (e.type == (int)EnemyType::GANG_BOSS) { isGangCutscene = true; bossPos = e.pos; }
+              }
+          }
+
+          bool isPrimeCutscene = false;
+          if (net.mode == NetworkManager::Mode::SERVER) {
+              for (auto& e : enemies) {
+                  if (e->type == EnemyType::ADAS_PRIME) {
+                      auto p = std::dynamic_pointer_cast<AdasPrime>(e);
+                      if (p && p->cutsceneState != PrimeCutscene::FIGHT) {
+                          isPrimeCutscene = true;
+                          bossPos = p->wardrobePos;
+                      }
+                  }
+              }
+          } else {
+              for (auto const& [id, e] : net.syncedEnemies) {
+                  if (e.type == (int)EnemyType::ADAS_PRIME && e.attackTimer != (float)(int)PrimeCutscene::FIGHT) {
+                      isPrimeCutscene = true;
+                      bossPos = e.pos; 
+                  }
+              }
+          }
+          
+          if (isGibonCutscene) {
+              // Camera on the ground looking up at the falling ball, staying still on XZ
+              Vector3 camPos = { bossPos.x + 30.0f, 5.0f, bossPos.z + 40.0f };
+              activeCam.position = camPos;
+              activeCam.target = bossPos;
+          } else {
+              activeCam.position = Vector3Add(bossPos, (Vector3){-15.0f, 15.0f, 25.0f});
+              activeCam.target = Vector3Add(bossPos, (Vector3){0, 10.0f, 0});
+          }
       }
 
       BeginMode3D(activeCam);
@@ -709,6 +918,30 @@ int main(int argc, char *argv[]) {
                   adas->isMoving = e.isMoving;
                   adas->angle = e.angle;
                   temp = adas;
+              } else if (e.type == (int)EnemyType::GIBON_BOSS) {
+                  auto gibon = std::make_shared<GibonRzygacz>(e.pos, e.id);
+                  gibon->gibonState = (GibonState)(int)e.attackTimer;
+                  gibon->stateTimer = e.walkTimer;
+                  gibon->isMoving = e.isMoving;
+                  gibon->angle = e.angle;
+                  gibon->craterCreated = ((int)e.attackTimer >= (int)GibonState::IMPACT);
+                  gibon->impactCrater = {e.pos, 20.0f};
+                  temp = gibon;
+              } else if (e.type == (int)EnemyType::GANG_BOSS) {
+                  auto gang = std::make_shared<GangBoss>(e.pos, e.id);
+                  gang->cutsceneState = (GangCutscene)(int)e.attackTimer;
+                  gang->stateTimer = e.walkTimer;
+                  gang->wardrobePos = e.pos;
+                  gang->wardrobePos.y = (gang->cutsceneState == GangCutscene::WARDROBE_FALLING) ? (400.0f - e.walkTimer * 60.0f) : 0.0f;
+                  temp = gang;
+              } else if (e.type == (int)EnemyType::ADAS_PRIME) {
+                  auto prime = std::make_shared<AdasPrime>(e.pos, e.id);
+                  prime->cutsceneState = (PrimeCutscene)(int)e.attackTimer;
+                  prime->cutsceneTimer = e.walkTimer;
+                  prime->angle = e.angle;
+                  prime->isMoving = e.isMoving;
+                  prime->wardrobePos = e.pos;
+                  temp = prime;
               } else {
                   temp = std::make_shared<Enemy>(e.pos, (EnemyType)e.type, (WeaponType)e.weapon, e.id);
                   temp->angle = e.angle;
@@ -749,7 +982,12 @@ int main(int argc, char *argv[]) {
 
       // --- Enemy HUD Pass ---
       if (net.mode == NetworkManager::Mode::SERVER) {
-          for (auto& e : enemies) e->DrawHUD(localPlayer.camera);
+          for (auto& e : enemies) {
+              if (e->type != EnemyType::BOSS && e->type != EnemyType::GIBON_BOSS && 
+                  e->type != EnemyType::GANG_BOSS && e->type != EnemyType::ADAS_PRIME) {
+                  e->DrawHUD(activeCam);
+              }
+          }
       } else {
           for (auto const& [id, e] : net.syncedEnemies) {
               std::shared_ptr<Enemy> temp;
@@ -758,6 +996,16 @@ int main(int argc, char *argv[]) {
                   adas->cutsceneState = (CutsceneState)(int)e.attackTimer;
                   adas->cutsceneTimer = e.walkTimer;
                   temp = adas;
+              } else if (e.type == (int)EnemyType::GIBON_BOSS) {
+                  auto gibon = std::make_shared<GibonRzygacz>(e.pos, e.id);
+                  gibon->gibonState = (GibonState)(int)e.attackTimer;
+                  gibon->stateTimer = e.walkTimer;
+                  temp = gibon;
+              } else if (e.type == (int)EnemyType::GANG_BOSS) {
+                  auto gang = std::make_shared<GangBoss>(e.pos, e.id);
+                  gang->cutsceneState = (GangCutscene)(int)e.attackTimer;
+                  gang->stateTimer = e.walkTimer;
+                  temp = gang;
               } else {
                   temp = std::make_shared<Enemy>(e.pos, (EnemyType)e.type, (WeaponType)e.weapon, e.id);
                   temp->angle = e.angle;
@@ -767,7 +1015,12 @@ int main(int argc, char *argv[]) {
               }
               temp->hp = e.hp;
               temp->maxHp = e.maxHp;
-              temp->DrawHUD(localPlayer.camera);
+              
+              // Only draw individual HUD if not a boss (bosses get global bar)
+              if (temp->type != EnemyType::BOSS && temp->type != EnemyType::GIBON_BOSS && 
+                  temp->type != EnemyType::GANG_BOSS && temp->type != EnemyType::ADAS_PRIME) {
+                  temp->DrawHUD(activeCam);
+              }
           }
       }
 
@@ -857,30 +1110,83 @@ int main(int argc, char *argv[]) {
       }
       
       // PLAYER HP
-      DrawText(TextFormat("PLAYER HP: %d / %d", localPlayer.hp, localPlayer.maxHp), 25, 45, 18, RAYWHITE);
+      int displayPlayerHp = std::max(0, localPlayer.hp);
+      float playerRatio = std::max(0.0f, std::min(1.0f, localPlayer.hp / (float)localPlayer.maxHp));
+      DrawText(TextFormat("PLAYER HP: %d / %d", displayPlayerHp, localPlayer.maxHp), 25, 45, 18, RAYWHITE);
       DrawRectangle(320, 45, 250, 15, DARKGRAY);
-      DrawRectangle(320, 45, (int)(250 * (localPlayer.hp / (float)localPlayer.maxHp)), 15, RED);
+      DrawRectangle(320, 45, (int)(250 * playerRatio), 15, RED);
 
       // VEHICLE HP
       if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
           auto v = vehicles[localPlayer.vehicleIndex];
-          DrawText(TextFormat("VEHICLE HP: %d / %d", v->health, v->maxHealth), 25, 65, 18, SKYBLUE);
+          int displayVehHp = std::max(0, v->health);
+          float vehRatio = std::max(0.0f, std::min(1.0f, v->health / (float)v->maxHealth));
+          DrawText(TextFormat("VEHICLE HP: %d / %d", displayVehHp, v->maxHealth), 25, 65, 18, SKYBLUE);
           DrawRectangle(320, 65, 250, 15, DARKGRAY);
-          DrawRectangle(320, 65, (int)(250 * (v->health / (float)v->maxHealth)), 15, BLUE);
+          DrawRectangle(320, 65, (int)(250 * vehRatio), 15, BLUE);
       }
 
 
       // BASE HP
-      DrawText(TextFormat("BASE HP: %d / %d", (int)baseHP, (int)maxBaseHP), 25, 80, 20, GOLD);
+      float baseRatio = std::max(0.0f, std::min(1.0f, baseHP / maxBaseHP));
+      DrawText(TextFormat("BASE HP: %d / %d", (int)std::max(0.0f, baseHP), (int)maxBaseHP), 25, 80, 20, GOLD);
       DrawRectangle(320, 80, 250, 20, DARKGRAY);
-      DrawRectangle(320, 80, (int)(250 * (std::max(0.0f, baseHP) / maxBaseHP)), 20, YELLOW);
+      DrawRectangle(320, 80, (int)(250 * baseRatio), 20, YELLOW);
 
       // WAVE INFO
-      DrawText(TextFormat("WAVE: %d / 40", currentWave), 25, 110, 20, ORANGE);
+      DrawText(TextFormat("WAVE: %d", currentWave), 25, 110, 20, ORANGE);
       if (!waveActive) {
           DrawText(TextFormat("NEXT WAVE IN: %.1fs", waveWaitTimer), 180, 110, 20, SKYBLUE);
       } else {
           DrawText(TextFormat("ENEMIES: %d", (int)enemies.size()), 180, 110, 20, LIGHTGRAY);
+      }
+
+      // --- GLOBAL BOSS HP BAR ---
+      std::shared_ptr<Enemy> activeBoss = nullptr;
+      if (net.mode == NetworkManager::Mode::SERVER) {
+          for (auto& e : enemies) {
+              if (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS || 
+                  e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME) {
+                  activeBoss = e; break;
+              }
+          }
+      } else {
+          // Client side boss detection
+          for (auto const& [id, e] : net.syncedEnemies) {
+               if (e.type == (int)EnemyType::BOSS || e.type == (int)EnemyType::GIBON_BOSS || 
+                   e.type == (int)EnemyType::GANG_BOSS || e.type == (int)EnemyType::ADAS_PRIME) {
+                   activeBoss = std::make_shared<Enemy>(e.pos, (EnemyType)e.type, WeaponType::KATANA, e.id);
+                   activeBoss->hp = e.hp;
+                   activeBoss->maxHp = e.maxHp;
+                   break;
+               }
+          }
+      }
+
+      if (activeBoss && activeBoss->hp > 0) {
+          int sw = GetScreenWidth();
+          int bw = 600;
+          int bh = 30;
+          int bx = sw/2 - bw/2;
+          int by = 50;
+          
+          float bossHpRatio = (float)activeBoss->hp / (float)activeBoss->maxHp;
+          DrawRectangle(bx - 4, by - 4, bw + 8, bh + 8, BLACK);
+          DrawRectangle(bx, by, bw, bh, DARKGRAY);
+          DrawRectangle(bx, by, (int)(bw * bossHpRatio), bh, RED);
+          
+          const char* bossName = "BOSS";
+          if (activeBoss->type == EnemyType::BOSS) bossName = "ADAS GOONER";
+          else if (activeBoss->type == EnemyType::GIBON_BOSS) bossName = "GIBON RZYGACZ";
+          else if (activeBoss->type == EnemyType::GANG_BOSS) bossName = "THE GANG";
+          else if (activeBoss->type == EnemyType::ADAS_PRIME) bossName = "ADAS PRIME";
+          
+          int tw = MeasureText(bossName, 25);
+          DrawText(bossName, sw/2 - tw/2, by - 30, 25, GOLD);
+          
+          const char* hpText = TextFormat("%d / %d", activeBoss->hp, activeBoss->maxHp);
+          int htw = MeasureText(hpText, 15);
+          DrawText(hpText, sw/2 - htw/2, by + 7, 15, WHITE);
       }
 
 

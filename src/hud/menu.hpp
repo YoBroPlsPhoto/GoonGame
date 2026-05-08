@@ -7,8 +7,8 @@
 #include <string>
 
 // Forward declarations or include after fixing path
-#include "bosses/adas_gooner.hpp"
-#include "enemies/enemy.hpp"
+#include "../bosses/adas_gooner.hpp"
+#include "../enemies/enemy.hpp"
 
 class Menu {
 public:
