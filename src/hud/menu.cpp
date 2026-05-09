@@ -1,6 +1,8 @@
 #include "menu.hpp"
 #include "raymath.h"
 #include "rlgl.h"
+#include <fstream>
+#include <iostream>
 
 Menu::Menu() {
     menuCam.position = (Vector3){ 20.0f, 12.0f, 20.0f };
@@ -17,6 +19,7 @@ Menu::Menu() {
         Vector3 pos = { cosf(ang) * 12.0f, 0, sinf(ang) * 12.0f };
         minions.push_back(std::make_shared<Enemy>(pos, EnemyType::MINION, WeaponType::MACHETE, -1000 - i));
     }
+    LoadSettings();
 }
 
 void Menu::Update() {
@@ -67,28 +70,158 @@ bool Menu::DrawButton(Rectangle rect, const char* text, Color baseColor) {
     return pressed;
 }
 
-void Menu::Draw() {
+void Menu::Draw(bool drawUI) {
     BeginMode3D(menuCam);
     DrawGrid(100, 5.0f);
     bgAdas->Draw();
     for (auto& m : minions) m->Draw();
     EndMode3D();
     
+    if (!drawUI) return;
+    
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
     
-    DrawRectangleGradientEx((Rectangle){0, 0, (float)sw, (float)sh}, Fade(BLACK, 0.2f), Fade(BLACK, 0.3f), Fade(BLACK, 0.6f), Fade(BLACK, 0.2f));
+    DrawRectangleGradientEx((Rectangle){0, 0, (float)sw, (float)sh}, Fade(BLACK, 0.9f), Fade(DARKBLUE, 0.3f), Fade(BLACK, 0.9f), Fade(BLACK, 0.8f));
 
     const char* title = "ADAS GOONER: ULTRA NYC";
-    float titleY = 100.0f + sinf(time * 2.0f) * 10.0f;
+    float titleY = 60.0f + sinf(time * 2.0f) * 5.0f;
     int tw = MeasureText(title, 60);
+    DrawText(title, sw/2 - tw/2 + 3, (int)titleY + 3, 60, Fade(BLACK, 0.5f));
     DrawText(title, sw/2 - tw/2, (int)titleY, 60, GOLD);
     
-    const char* subtitle = "THE FINAL GOONING SESSION";
-    int stw = MeasureText(subtitle, 20);
-    DrawText(subtitle, sw/2 - stw/2, (int)titleY + 90, 20, RAYWHITE);
-    
-    if (DrawButton((Rectangle){sw/2.0f - 150, (float)sh/2.0f - 20.0f, 300, 60}, "HOST MISSION", DARKGRAY)) {
-        shouldStartHost = true;
+    float startX = sw/2.0f - 150.0f;
+    float startY = sh/2.0f - 100.0f;
+
+    if (currentState == MenuState::MAIN) {
+        if (DrawButton((Rectangle){startX, startY, 300, 60}, "HOST MISSION", DARKGRAY)) {
+            currentState = MenuState::HOST;
+        }
+        if (DrawButton((Rectangle){startX, startY + 80, 300, 60}, "JOIN MISSION", DARKGRAY)) {
+            currentState = MenuState::JOIN;
+        }
+        if (DrawButton((Rectangle){startX, startY + 160, 300, 60}, "OPTIONS", DARKGRAY)) {
+            currentState = MenuState::OPTIONS;
+        }
+        if (DrawButton((Rectangle){startX, startY + 240, 300, 60}, "EXIT", MAROON)) {
+             CloseWindow();
+        }
+    } else if (currentState == MenuState::HOST) {
+        DrawText("ENTER HOSTNAME:", (int)startX, (int)startY - 40, 20, RAYWHITE);
+        DrawRectangleRec((Rectangle){startX, startY, 300, 60}, WHITE);
+        DrawText(hostName.c_str(), (int)startX + 10, (int)startY + 15, 30, BLACK);
+        
+        int key = GetCharPressed();
+        while (key > 0) {
+            if (hostName.length() < 20) hostName += (char)key;
+            key = GetCharPressed();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE) && !hostName.empty()) hostName.pop_back();
+
+        if (DrawButton((Rectangle){startX, startY + 80, 300, 60}, "START SERVER", GREEN)) {
+            SaveSettings();
+            shouldStartHost = true;
+        }
+        if (DrawButton((Rectangle){startX, startY + 160, 300, 60}, "BACK", DARKGRAY)) {
+            SaveSettings();
+            currentState = MenuState::MAIN;
+        }
+    } else if (currentState == MenuState::JOIN) {
+        DrawText("ENTER IP ADDRESS:", (int)startX, (int)startY - 40, 20, RAYWHITE);
+        DrawRectangleRec((Rectangle){startX, startY, 300, 60}, WHITE);
+        DrawText(joinIP.c_str(), (int)startX + 10, (int)startY + 15, 30, BLACK);
+        
+        int key = GetCharPressed();
+        while (key > 0) {
+            if (joinIP.length() < 15) joinIP += (char)key;
+            key = GetCharPressed();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE) && !joinIP.empty()) joinIP.pop_back();
+
+        if (DrawButton((Rectangle){startX, startY + 80, 300, 60}, "CONNECT TO IP", GREEN)) {
+            SaveSettings();
+            shouldStartJoin = true;
+        }
+        
+        DrawText("LOCAL MISSIONS:", (int)startX, (int)startY + 160, 20, GOLD);
+        // Note: Server list drawing moved to main.cpp to access NetworkManager, 
+        // but we leave space here for it.
+
+        if (DrawButton((Rectangle){startX, (float)sh - 100, 300, 60}, "BACK", DARKGRAY)) {
+            SaveSettings();
+            currentState = MenuState::MAIN;
+        }
+    } else if (currentState == MenuState::OPTIONS) {
+        DrawText("PLAYER NICKNAME:", (int)startX, (int)startY - 40, 20, GOLD);
+        DrawRectangleRec((Rectangle){startX, startY, 300, 50}, WHITE);
+        DrawText(playerNick.c_str(), (int)startX + 10, (int)startY + 10, 30, BLACK);
+        
+        int key = GetCharPressed();
+        while (key > 0) {
+            if (playerNick.length() < 16) playerNick += (char)key;
+            key = GetCharPressed();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE) && !playerNick.empty()) playerNick.pop_back();
+
+        DrawText("AUDIO SETTINGS", (int)startX, (int)startY + 80, 25, GOLD);
+        
+        DrawText(TextFormat("MASTER VOLUME: %d%%", (int)(GetMasterVolume() * 100)), (int)startX, (int)startY + 110, 20, RAYWHITE);
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+            Vector2 m = GetMousePosition();
+            if (m.x > startX && m.x < startX + 300 && m.y > startY + 140 && m.y < startY + 160) {
+                SetMasterVolume((m.x - startX) / 300.0f);
+            }
+        }
+        DrawRectangle((int)startX, (int)startY + 140, 300, 20, BLACK);
+        DrawRectangle((int)startX, (int)startY + 140, (int)(GetMasterVolume() * 300), 20, SKYBLUE);
+
+        if (DrawButton((Rectangle){startX, startY + 180, 300, 40}, vsync ? "VSYNC: ON" : "VSYNC: OFF", vsync ? GREEN : MAROON)) {
+            vsync = !vsync;
+        }
+
+        if (DrawButton((Rectangle){startX, startY + 230, 300, 40}, useWafelModel ? "MODEL: WAFEL" : "MODEL: NORMAL", useWafelModel ? YELLOW : DARKGRAY)) {
+            useWafelModel = !useWafelModel;
+        }
+
+        if (DrawButton((Rectangle){startX, startY + 280, 300, 40}, "TOGGLE FULLSCREEN", DARKBLUE)) {
+            shouldToggleFullscreen = true;
+        }
+        
+        if (DrawButton((Rectangle){startX, startY + 330, 300, 60}, "BACK", DARKGRAY)) {
+            SaveSettings();
+            currentState = MenuState::MAIN;
+        }
+    }
+}
+
+void Menu::SaveSettings() {
+    std::ofstream f("settings.txt");
+    if (f.is_open()) {
+        f << playerNick << "\n";
+        f << hostName << "\n";
+        f << joinIP << "\n";
+        f << GetMasterVolume() << "\n";
+        f << vsync << "\n";
+        f << resIndex << "\n";
+        f << useWafelModel << "\n";
+        f.close();
+    }
+}
+
+void Menu::LoadSettings() {
+    std::ifstream f("settings.txt");
+    if (f.is_open()) {
+        if (!std::getline(f, playerNick)) playerNick = "Gooner";
+        if (!std::getline(f, hostName)) hostName = "MY SERVER";
+        if (!std::getline(f, joinIP)) joinIP = "127.0.0.1";
+        std::string volStr;
+        if (std::getline(f, volStr)) {
+            try { SetMasterVolume(std::stof(volStr)); } catch(...) {}
+        }
+        std::string vsyncStr, resStr, modelStr;
+        if (std::getline(f, vsyncStr)) vsync = (vsyncStr == "1");
+        if (std::getline(f, resStr)) try { resIndex = std::stoi(resStr); } catch(...) {}
+        if (std::getline(f, modelStr)) useWafelModel = (modelStr == "1");
+        f.close();
     }
 }

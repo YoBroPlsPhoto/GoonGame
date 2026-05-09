@@ -1,6 +1,7 @@
 #include "desert_map.hpp"
 #include <cmath>
 #include "raymath.h"
+#include "rlgl.h"
 
 DesertMap::DesertMap() {
     for (int x = 0; x <= terrainSize; x++) {
@@ -24,22 +25,42 @@ DesertMap::DesertMap() {
 
 DesertMap::~DesertMap() {}
 
-void DesertMap::Draw(int detailLevel, Vector3 viewPos) {
+void DesertMap::Draw(int detailLevel, Vector3 viewPos, int currentWave) {
+    rlBegin(RL_TRIANGLES);
     for (int x = 0; x < terrainSize; x++) {
         for (int z = 0; z < terrainSize; z++) {
+            // Distance culling optimization
             float ox = -((float)terrainSize * terrainScale) / 2.0f;
             float oz = -((float)terrainSize * terrainScale) / 2.0f;
+            float px = ox + (float)x * terrainScale;
+            float pz = oz + (float)z * terrainScale;
+            
+            if (detailLevel > 0 && Vector2Distance({px, pz}, {viewPos.x, viewPos.z}) > 1000.0f) continue;
 
-            Vector3 p1 = { ox + (float)x * terrainScale, terrainHeights[x][z], oz + (float)z * terrainScale };
-            Vector3 p2 = { ox + (float)(x + 1) * terrainScale, terrainHeights[x+1][z], oz + (float)z * terrainScale };
-            Vector3 p3 = { ox + (float)x * terrainScale, terrainHeights[x][z+1], oz + (float)(z + 1) * terrainScale };
+            Vector3 p1 = { px, terrainHeights[x][z], pz };
+            Vector3 p2 = { ox + (float)(x + 1) * terrainScale, terrainHeights[x+1][z], pz };
+            Vector3 p3 = { px, terrainHeights[x][z+1], oz + (float)(z + 1) * terrainScale };
             Vector3 p4 = { ox + (float)(x+1) * terrainScale, terrainHeights[x+1][z+1], oz + (float)(z + 1) * terrainScale };
             
             Color c = ((x + z) % 2 == 0) ? BEIGE : (Color){ 235, 200, 150, 255 };
-            DrawTriangle3D(p1, p3, p2, c);
-            DrawTriangle3D(p2, p3, p4, c);
+            rlColor4ub(c.r, c.g, c.b, c.a);
+            
+            // Normal 1: p1 -> p3 -> p2  (CCW)
+            Vector3 n1 = Vector3Normalize(Vector3CrossProduct(Vector3Subtract(p3, p1), Vector3Subtract(p2, p1)));
+            rlNormal3f(n1.x, n1.y, n1.z);
+            rlVertex3f(p1.x, p1.y, p1.z);
+            rlVertex3f(p3.x, p3.y, p3.z);
+            rlVertex3f(p2.x, p2.y, p2.z);
+
+            // Normal 2: p2 -> p3 -> p4  (CCW)
+            Vector3 n2 = Vector3Normalize(Vector3CrossProduct(Vector3Subtract(p3, p2), Vector3Subtract(p4, p2)));
+            rlNormal3f(n2.x, n2.y, n2.z);
+            rlVertex3f(p2.x, p2.y, p2.z);
+            rlVertex3f(p3.x, p3.y, p3.z);
+            rlVertex3f(p4.x, p4.y, p4.z);
         }
     }
+    rlEnd();
 
     // Oasis
     DrawCircle3D((Vector3){ 0, -1.5f, 0 }, 15.0f, (Vector3){ 1, 0, 0 }, 90.0f, BLUE);

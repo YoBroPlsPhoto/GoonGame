@@ -1,6 +1,25 @@
 #include "adas_gooner.hpp"
 #include "rlgl.h"
 #include "raymath.h"
+#include <iostream>
+
+Model AdasGooner::wafelModel;
+bool AdasGooner::wafelModelLoaded = false;
+bool AdasGooner::globalUseWafelModel = false;
+
+void AdasGooner::LoadSharedResources() {
+    if (!wafelModelLoaded) {
+        wafelModel = LoadModel("../models/wafel.obj");
+        wafelModelLoaded = true;
+    }
+}
+
+void AdasGooner::UnloadSharedResources() {
+    if (wafelModelLoaded) {
+        UnloadModel(wafelModel);
+        wafelModelLoaded = false;
+    }
+}
 
 AdasGooner::AdasGooner(Vector3 startPos, int enemyId) 
     : Enemy(startPos, EnemyType::BOSS, WeaponType::KATANA, enemyId) {
@@ -13,8 +32,8 @@ AdasGooner::AdasGooner(Vector3 startPos, int enemyId)
     // Stats for Adas Gooner
     hp = 80000;
     maxHp = 80000;
-    speed = 0.05f; // Extremely slow but threatening
-    radius = 3.0f;
+    speed = 0.04f; // Extremely slow but threatening
+    radius = 8.0f;
     color = {255, 100, 100, 255}; // Deep red
 }
 
@@ -111,8 +130,19 @@ void AdasGooner::Draw() {
     // Only draw him if doors are opening or he's walked out
     if (cutsceneState == CutsceneState::WARDROBE_CLOSED) return;
 
+    if (globalUseWafelModel && wafelModelLoaded) {
+        rlPushMatrix();
+        rlTranslatef(position.x, position.y, position.z);
+        rlRotatef(angle, 0, 1, 0);
+        // Scale and rotation for wafel model
+        rlScalef(0.6f, 0.6f, 0.6f); 
+        DrawModel(wafelModel, (Vector3){0, 10, 0}, 1.0f, WHITE);
+        rlPopMatrix();
+        return;
+    }
+
     // --- DRAW ADAS GOONER ---
-    float scale = 2.5f; // Scaled down to player-like size
+    float scale = 9.0f; // BOSS SIZE
     float animWalk = isMoving ? sinf(walkTimer * speed * 30.0f) : 0.0f;
     float animAttack = (attackTimer > 0) ? (1.0f - attackTimer / 1.5f) : 0.0f; // Slower cooldown logic mapped
     
@@ -182,8 +212,8 @@ void AdasGooner::Draw() {
 BoundingBox AdasGooner::GetBoundingBox() {
     // Ponieważ scale = 9.0f, musimy to uwzględnić w boksie kolizji.
     // Boss ma ok. 2.5 jednostek wysokości w skali lokalnej, co daje ~22 jednostki w świecie.
-    float halfWidth = 1.5f; 
-    float height = 5.0f;
+    float halfWidth = 4.5f; 
+    float height = 22.0f;
 
     return (BoundingBox){
         (Vector3){ position.x - halfWidth, position.y, position.z - halfWidth },

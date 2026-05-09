@@ -11,7 +11,7 @@ public:
     MapType type = MapType::CITY;
     int worldDetail = 1; // 0 = low, 1 = high
     virtual ~Map() {}
-    virtual void Draw(int detailLevel = 1, Vector3 viewPos = {0,0,0}) = 0;
+    virtual void Draw(int detailLevel = 1, Vector3 viewPos = {0,0,0}, int currentWave = 1) = 0;
     virtual float GetHeight(float x, float z) = 0;
     virtual const std::vector<BoundingBox>& GetObstacles() const = 0;
 };

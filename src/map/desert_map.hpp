@@ -8,7 +8,7 @@ public:
     DesertMap();
     ~DesertMap() override;
     
-    void Draw(int detailLevel = 1, Vector3 viewPos = {0,0,0}) override;
+    void Draw(int detailLevel = 1, Vector3 viewPos = {0,0,0}, int currentWave = 1) override;
     float GetHeight(float x, float z) override;
     const std::vector<BoundingBox>& GetObstacles() const override { return obstacles; }
 

@@ -24,6 +24,7 @@
 
 struct PlayerData {
     int id;
+    char name[32];
     Vector3 position;
     Vector3 camTarget;
     int hp;
@@ -58,11 +59,11 @@ public:
     NetworkManager();
     ~NetworkManager();
 
-    bool StartServer(int port);
+    bool StartServer(int port, const std::string& name = "LAN SERVER");
     bool StartClient(const std::string& ip, int port);
     void StartDiscovery(); 
     void Update();
-    void SendPlayerUpdate(int id, Vector3 pos, Vector3 target, int hp, int money, bool firing);
+    void SendPlayerUpdate(int id, const char* name, Vector3 pos, Vector3 target, int hp, int money, bool firing);
     void SendWorldUpdate(float baseHP, int wave, const std::vector<EnemySync>& enemies, const std::vector<PlayerSyncData>& players);
     void SendDisconnect(int id);
 
@@ -81,6 +82,8 @@ public:
     int remoteWave;
     bool gameStarted;
     int localPlayerId;
+    std::string serverName;
+    bool shouldQuit;
 
 private:
     asio::io_context io_context;

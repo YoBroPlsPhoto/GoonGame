@@ -43,6 +43,8 @@ public:
     Weapon* previousWeapon = nullptr;
     std::vector<Weapon*> inventory;
     bool showInventory = false;
+    bool isAdmin = false;
+    bool showSettings = false;
 
     Player(Vector3 startPos, int id);
     ~Player();

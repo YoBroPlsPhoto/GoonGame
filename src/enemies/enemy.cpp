@@ -50,6 +50,7 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     Vector3 targetPos = basePos;
     int* targetHp = nullptr;
     bool targetingPlayer = false;
+    bool targetingStructure = false;
 
     // Target nearest player if close and alive
     float closestDist = 1000.0f;
@@ -60,7 +61,8 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
             closestDist = d;
             targetPos = p.pos;
             targetHp = p.hp;
-            targetingPlayer = true;
+            targetingPlayer = !p.isStructure;
+            targetingStructure = p.isStructure;
         }
     }
 
@@ -69,6 +71,7 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     if (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS || 
         type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME) {
         moveTarget = basePos; // Always move towards base
+        targetingPlayer = false; // Disable stopDist = 1.5 logic for movement check
     }
 
     Vector3 direction = Vector3Subtract(targetPos, position); // For facing/attacking
@@ -79,9 +82,11 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     float dist = Vector3Length(direction);
     float moveDist = Vector3Length(moveDirection);
 
-    // Stop distance: 28m for base (don't enter!), 1.5m for player
-    float stopDist = targetingPlayer ? 1.5f : ((type == EnemyType::SHOOTER || type == EnemyType::BOSS) ? 40.0f : 28.0f);
-    if (!targetingPlayer && moveDist < 28.0f) moveDist = 0; // Strict base boundary
+    bool targetingEntity = targetingPlayer || targetingStructure;
+
+    // Stop distance: 28m for base (don't enter!), 2.5m for entities
+    float stopDist = targetingEntity ? 2.5f : ((type == EnemyType::SHOOTER || type == EnemyType::BOSS) ? 40.0f : 28.0f);
+    if (!targetingEntity && moveDist < 28.0f) moveDist = 0; // Strict base boundary
 
     float dt = GetFrameTime();
     float timeScale = dt * 60.0f;
@@ -109,8 +114,12 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
             float damage = (weapon == WeaponType::KATANA) ? 60 : (weapon == WeaponType::MACHETE ? 40 : 20);
             if (type == EnemyType::BOSS) damage *= 3.0f;
 
-            if (targetingPlayer && targetHp) {
-                *targetHp -= (int)damage / 5; // Players take less damage than the base
+            if (targetingEntity && targetHp) {
+                if (targetingPlayer) {
+                    *targetHp -= (int)damage / 5; // Players take less damage than the base
+                } else {
+                    *targetHp -= (int)damage; // Structures take full damage
+                }
             } else if (baseHp && *baseHp > 0) {
                 *baseHp -= damage;
                 if (*baseHp < 0) *baseHp = 0;

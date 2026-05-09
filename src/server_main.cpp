@@ -5,7 +5,7 @@
 
 int main() {
     NetworkManager net;
-    if (!net.StartServer(1234)) {
+    if (!net.StartServer(1234, "DEDICATED SERVER")) {
         std::cerr << "Could not start server on port 1234" << std::endl;
         return 1;
     }
@@ -15,7 +15,7 @@ int main() {
     std::cout << "====================================" << std::endl;
     std::cout << "Listening on port 1234..." << std::endl;
 
-    while (true) {
+    while (!net.shouldQuit) {
         net.Update();
         
         // Output status occasionally
@@ -29,5 +29,6 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
+    std::cout << "Server shutting down (Host disconnected or quit signal)." << std::endl;
     return 0;
 }

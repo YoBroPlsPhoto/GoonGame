@@ -1,7 +1,7 @@
 #include "network_manager.hpp"
 #include <iostream>
 
-NetworkManager::NetworkManager() : mode(Mode::NONE), socket(nullptr), discovery_socket(nullptr), gameStarted(false), localPlayerId(-1) {
+NetworkManager::NetworkManager() : mode(Mode::NONE), socket(nullptr), discovery_socket(nullptr), gameStarted(false), localPlayerId(-1), serverName("LAN SERVER"), shouldQuit(false) {
 }
 
 NetworkManager::~NetworkManager() {
@@ -11,14 +11,15 @@ NetworkManager::~NetworkManager() {
     }
 }
 
-bool NetworkManager::StartServer(int port) {
+bool NetworkManager::StartServer(int port, const std::string& name) {
     try {
         socket = new asio::ip::udp::socket(io_context, asio::ip::udp::endpoint(asio::ip::udp::v4(), port));
         socket->set_option(asio::socket_base::broadcast(true));
         socket->non_blocking(true);
         mode = Mode::SERVER;
         localPlayerId = 0;
-        std::cout << "ASIO Server started on port " << port << std::endl;
+        serverName = name;
+        std::cout << "ASIO Server started on port " << port << " with name: " << name << std::endl;
         return true;
     } catch (std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;
@@ -64,7 +65,7 @@ void NetworkManager::Update() {
         static auto lastBroadcast = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastBroadcast).count() >= 1) {
-            std::string msg = "AdasServer:1234";
+            std::string msg = "AdasServer:1234:" + serverName;
             asio::ip::udp::endpoint broadcast_ep(asio::ip::address_v4::broadcast(), 1235);
             asio::error_code ec;
             socket->send_to(asio::buffer(msg), broadcast_ep, 0, ec);
@@ -100,6 +101,7 @@ void NetworkManager::HandlePacket(size_t bytes_recvd, const asio::ip::udp::endpo
             if (!data->active) {
                 remotePlayers.erase(data->id);
                 if (mode == Mode::SERVER) {
+                    if (data->id == 0) shouldQuit = true; // Host disconnected
                     known_clients.erase(data->id);
                     for (auto const& [cid, endpoint] : known_clients) socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
                 }
@@ -156,7 +158,10 @@ void NetworkManager::HandleDiscovery() {
             std::string msg(disc_buffer, len);
             if (msg.find("AdasServer:") == 0) {
                 std::string ip = disc_sender.address().to_string();
-                discoveredServers[ip] = { ip, 1234, "LAN SERVER", (float)GetTime() };
+                size_t firstColon = msg.find(':');
+                size_t secondColon = msg.find(':', firstColon + 1);
+                std::string sName = (secondColon != std::string::npos) ? msg.substr(secondColon + 1) : "LAN SERVER";
+                discoveredServers[ip] = { ip, 1234, sName, (float)GetTime() };
             }
         }
     }
@@ -192,9 +197,10 @@ void NetworkManager::SendWorldUpdate(float baseHP, int wave, const std::vector<E
     }
 }
 
-void NetworkManager::SendPlayerUpdate(int id, Vector3 pos, Vector3 target, int hp, int money, bool firing) {
+void NetworkManager::SendPlayerUpdate(int id, const char* name, Vector3 pos, Vector3 target, int hp, int money, bool firing) {
     if (!socket) return;
-    PlayerData data = { id, pos, target, hp, money, firing, true };
+    PlayerData data = { id, "", pos, target, hp, money, firing, true };
+    if (name) strncpy(data.name, name, 31);
     if (mode == Mode::CLIENT) {
         socket->send_to(asio::buffer(&data, sizeof(PlayerData)), server_target_endpoint);
     } else if (mode == Mode::SERVER) {
@@ -206,7 +212,7 @@ void NetworkManager::SendPlayerUpdate(int id, Vector3 pos, Vector3 target, int h
 
 void NetworkManager::SendDisconnect(int id) {
     if (!socket) return;
-    PlayerData data = { id, {0,0,0}, {0,0,0}, 0, false, false }; 
+    PlayerData data = { id, "", {0,0,0}, {0,0,0}, 0, 0, false, false }; 
     if (mode == Mode::CLIENT) {
         socket->send_to(asio::buffer(&data, sizeof(PlayerData)), server_target_endpoint);
     } else if (mode == Mode::SERVER) {

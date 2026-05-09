@@ -8,7 +8,7 @@ public:
     CityMap();
     ~CityMap() override;
     
-    void Draw(int detailLevel = 1, Vector3 viewPos = {0,0,0}) override;
+    void Draw(int detailLevel = 1, Vector3 viewPos = {0,0,0}, int currentWave = 1) override;
     float GetHeight(float x, float z) override;
     const std::vector<BoundingBox>& GetObstacles() const override { return obstacles; }
 
@@ -24,7 +24,7 @@ private:
     Vector3 mainBasePos = { 0.0f, 0, 150.0f };
     Model trashBinModel;
     bool modelLoaded = false;
-    void DrawMainBase();
+    void DrawMainBase(int currentWave);
     void DrawText3D(const char* text, Vector3 pos, float size, float spacing, Color col);
 };
 

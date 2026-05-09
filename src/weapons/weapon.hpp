@@ -5,10 +5,12 @@
 
 class Weapon {
 public:
-    int damage;
-    float attackCooldown;
-    float currentCooldown;
-    float recoilTimer;
+    int damage = 0;
+    float attackCooldown = 0.0f;
+    float currentCooldown = 0.0f;
+    float recoilTimer = 0.0f;
+    const char* name = "Weapon";
+    bool isMelee = false;
 
     // Ammo system
     int magSize = 30;

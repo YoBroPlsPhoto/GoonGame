@@ -10,6 +10,13 @@ public:
     void Update(const std::vector<TargetInfo>& players, float* baseHp, Vector3 basePos) override;
     void Draw() override;
     BoundingBox GetBoundingBox() override;
+
+    static Model wafelModel;
+    static bool wafelModelLoaded;
+    static bool globalUseWafelModel;
+
+    static void LoadSharedResources();
+    static void UnloadSharedResources();
     
     CutsceneState cutsceneState;
     float cutsceneTimer;

@@ -12,6 +12,7 @@ struct TargetInfo {
     Vector3 pos;
     int* hp;
     bool active;
+    bool isStructure = false;
 };
 
 class Enemy {
