@@ -19,12 +19,27 @@ bool NetworkManager::StartServer(int port, const std::string& name) {
         mode = Mode::SERVER;
         localPlayerId = 0;
         serverName = name;
+        activePort = port;
         std::cout << "ASIO Server started on port " << port << " with name: " << name << std::endl;
         return true;
     } catch (std::exception& e) {
         std::cerr << "Server error: " << e.what() << std::endl;
         return false;
     }
+}
+
+bool NetworkManager::StartServerAutoPort(int startPort, int maxTries, const std::string& name) {
+    for (int i = 0; i < maxTries; i++) {
+        int port = startPort + i;
+        if (StartServer(port, name))
+            return true;
+        // Reset socket if failed
+        if (socket) {
+            delete socket;
+            socket = nullptr;
+        }
+    }
+    return false;
 }
 
 bool NetworkManager::StartClient(const std::string& ip, int port) {
@@ -65,7 +80,7 @@ void NetworkManager::Update() {
         static auto lastBroadcast = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastBroadcast).count() >= 1) {
-            std::string msg = "AdasServer:1234:" + serverName;
+            std::string msg = "AdasServer:" + std::to_string(activePort) + ":" + serverName;
             asio::ip::udp::endpoint broadcast_ep(asio::ip::address_v4::broadcast(), 1235);
             asio::error_code ec;
             socket->send_to(asio::buffer(msg), broadcast_ep, 0, ec);

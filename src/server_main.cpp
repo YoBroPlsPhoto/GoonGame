@@ -3,17 +3,31 @@
 #include <chrono>
 #include <thread>
 
+#ifdef _WIN32
+#include <sys/stat.h>
+extern "C" {
+    int stat64i32(const char *path, struct _stat64i32 *buffer) {
+        return _stat64i32(path, buffer);
+    }
+}
+#endif
+
 int main() {
     NetworkManager net;
-    if (!net.StartServer(1234, "DEDICATED SERVER")) {
-        std::cerr << "Could not start server on port 1234" << std::endl;
+
+    const int BASE_PORT = 1234;
+    const int MAX_TRIES = 10;
+
+    if (!net.StartServerAutoPort(BASE_PORT, MAX_TRIES, "DEDICATED SERVER")) {
+        std::cerr << "Could not start server on ports "
+                  << BASE_PORT << "-" << (BASE_PORT + MAX_TRIES - 1) << std::endl;
         return 1;
     }
 
     std::cout << "====================================" << std::endl;
     std::cout << "   AdasGooner Headless Server       " << std::endl;
     std::cout << "====================================" << std::endl;
-    std::cout << "Listening on port 1234..." << std::endl;
+    std::cout << "Listening on port " << net.activePort << "..." << std::endl;
 
     while (!net.shouldQuit) {
         net.Update();

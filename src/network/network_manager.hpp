@@ -60,6 +60,7 @@ public:
     ~NetworkManager();
 
     bool StartServer(int port, const std::string& name = "LAN SERVER");
+    bool StartServerAutoPort(int startPort, int maxTries, const std::string& name = "LAN SERVER");
     bool StartClient(const std::string& ip, int port);
     void StartDiscovery(); 
     void Update();
@@ -84,6 +85,7 @@ public:
     int localPlayerId;
     std::string serverName;
     bool shouldQuit;
+    int activePort = 0; // Actual port the server is listening on
 
 private:
     asio::io_context io_context;
