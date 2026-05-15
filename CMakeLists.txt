@@ -35,10 +35,15 @@ set(SOURCES
     src/weapons/revolver.cpp
     src/weapons/rpg.cpp
     src/weapons/knife.cpp
+    src/weapons/builder_tool.cpp
     src/effects/particle_system.cpp
     src/vehicles/vehicle.cpp
     src/vehicles/tank.cpp
     src/bosses/adas_gooner.cpp
+    src/bosses/adas_prime.cpp
+    src/bosses/gang_boss.cpp
+    src/bosses/gibon_rzygacz.cpp
+    src/structures/structure.cpp
 )
 
 # Detect platform paths
