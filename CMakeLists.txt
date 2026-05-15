@@ -44,6 +44,11 @@ set(SOURCES
     src/bosses/gang_boss.cpp
     src/bosses/gibon_rzygacz.cpp
     src/structures/structure.cpp
+    src/core/game.cpp
+    src/core/game_update.cpp
+    src/core/game_input.cpp
+    src/core/game_network.cpp
+    src/core/game_render.cpp
 )
 
 # Detect platform paths
