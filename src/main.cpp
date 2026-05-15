@@ -28,6 +28,15 @@
 #include "structures/structure.hpp"
 #include "weapons/builder_tool.hpp"
 
+#ifdef _WIN32
+#include <sys/stat.h>
+extern "C" {
+    int stat64i32(const char *path, struct _stat64i32 *buffer) {
+        return _stat64i32(path, buffer);
+    }
+}
+#endif
+
 enum class GameState { MENU, LOBBY, GAME, PAUSED };
 
 int main(int argc, char *argv[]) {
