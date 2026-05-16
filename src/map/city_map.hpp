@@ -12,12 +12,22 @@ public:
     float GetHeight(float x, float z) override;
     const std::vector<BoundingBox>& GetObstacles() const override { return obstacles; }
 
-private:
     struct Building {
         Vector3 pos;
         Vector3 size;
         Color color;
     };
+    std::vector<Building>& GetBuildings() { return buildings; }
+    const std::vector<Building>& GetBuildings() const { return buildings; }
+    std::vector<BoundingBox>& GetObstaclesMut() { return obstacles; }
+    Vector3 GetBasePos() const { return mainBasePos; }
+
+    // Editor integration — save/load buildings from data file
+    bool SaveBuildingsToFile(const char* path);
+    bool LoadBuildingsFromFile(const char* path);
+    void RebuildObstaclesFromBuildings();
+
+private:
     std::vector<Building> buildings;
     std::vector<BoundingBox> obstacles;
     

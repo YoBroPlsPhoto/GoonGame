@@ -1,4 +1,5 @@
 #pragma once
+#include "editor/editor.hpp"
 #include "bosses/adas_gooner.hpp"
 #include "bosses/adas_prime.hpp"
 #include "bosses/gang_boss.hpp"
@@ -29,7 +30,7 @@
 #include <vector>
 #include <map>
 
-enum class GameState { MENU, LOBBY, GAME, PAUSED };
+enum class GameState { MENU, LOBBY, GAME, PAUSED, EDITOR };
 
 class Game {
 public:
@@ -50,6 +51,7 @@ private:
     Player localPlayer;
     Map *currentMap;
     ParticleSystem effects;
+    Editor editor;
 
     Shader lighting;
     Texture2D sunTex;

@@ -125,10 +125,31 @@ void Game::Init() {
 
 void Game::Run() {
     while (!shouldExit && !WindowShouldClose()) {
-        UpdateCore();
-        HandleInput();
-        UpdateNetworkAndEnemies();
-        Render();
+        // F12 toggles editor from any state
+        if (IsKeyPressed(KEY_F12)) {
+            if (state == GameState::EDITOR) {
+                state = GameState::MENU;
+                if (IsCursorHidden()) EnableCursor();
+            } else {
+                state = GameState::EDITOR;
+                editor.Init(currentMap);
+            }
+        }
+
+        if (state == GameState::EDITOR) {
+            editor.Update();
+            editor.Render();
+            if (editor.shouldExit) {
+                state = GameState::MENU;
+                editor.shouldExit = false;
+                if (IsCursorHidden()) EnableCursor();
+            }
+        } else {
+            UpdateCore();
+            HandleInput();
+            UpdateNetworkAndEnemies();
+            Render();
+        }
     }
     
     UnloadRenderTexture(reflectionTarget);

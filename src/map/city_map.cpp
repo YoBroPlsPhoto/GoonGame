@@ -2,6 +2,7 @@
 #include <cmath>
 #include "rlgl.h"
 #include "raymath.h"
+#include <cstdio>
 
 CityMap::CityMap() {
   type = MapType::CITY;
@@ -10,24 +11,27 @@ CityMap::CityMap() {
   trashBinModel = LoadModel("../models/bin.obj");
   modelLoaded = true;
   
-  // Generate city
-  for (int z = -40; z <= 40; z++) {
-    for (int x : {-3, -2, 2, 3}) {
-      float px = x * 60.0f;
-      float pz = z * 55.0f;
+  // Try loading buildings from editor data file first
+  if (!LoadBuildingsFromFile("../maps/city_buildings.dat")) {
+    // No saved data — generate city randomly (default)
+    for (int z = -40; z <= 40; z++) {
+      for (int x : {-3, -2, 2, 3}) {
+        float px = x * 60.0f;
+        float pz = z * 55.0f;
 
-      float w = (float)GetRandomValue(30, 45);
-      float h = (float)GetRandomValue(120, 350);
-      float d = (float)GetRandomValue(30, 45);
+        float w = (float)GetRandomValue(30, 45);
+        float h = (float)GetRandomValue(120, 350);
+        float d = (float)GetRandomValue(30, 45);
 
-      unsigned char gray = GetRandomValue(60, 90);
-      buildings.push_back({(Vector3){px, h / 2.0f, pz}, (Vector3){w, h, d},
-                           (Color){gray, gray, gray, 255}});
-      obstacles.push_back(
-          (BoundingBox){(Vector3){px - w / 2.0f, 0, pz - d / 2.0f},
-                        (Vector3){px + w / 2.0f, h, pz + d / 2.0f}});
+        unsigned char gray = GetRandomValue(60, 90);
+        buildings.push_back({(Vector3){px, h / 2.0f, pz}, (Vector3){w, h, d},
+                             (Color){gray, gray, gray, 255}});
+      }
     }
   }
+  
+  // Build collision obstacles from buildings
+  RebuildObstaclesFromBuildings();
 
   // --- MAIN BASE (30 FLOORS) ---
   float bw = 50.0f;
@@ -455,4 +459,60 @@ void CityMap::DrawText3D(const char *text, Vector3 pos, float size,
     DrawTextEx(font, text, (Vector2){0, 0}, size * 100, spacing * 100, col);
     
     rlPopMatrix();
+}
+
+// ── Editor Integration: Save buildings to data file ──
+bool CityMap::SaveBuildingsToFile(const char* path) {
+    FILE* f = fopen(path, "w");
+    if (!f) return false;
+    fprintf(f, "CITY_BUILDINGS %d\n", (int)buildings.size());
+    for (auto& b : buildings) {
+        fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d\n",
+            b.pos.x, b.pos.y, b.pos.z,
+            b.size.x, b.size.y, b.size.z,
+            b.color.r, b.color.g, b.color.b, b.color.a);
+    }
+    fclose(f);
+    printf("[EDITOR] Saved %d buildings to %s\n", (int)buildings.size(), path);
+    return true;
+}
+
+// ── Editor Integration: Load buildings from data file ──
+bool CityMap::LoadBuildingsFromFile(const char* path) {
+    FILE* f = fopen(path, "r");
+    if (!f) return false;
+    int count = 0;
+    if (fscanf(f, "CITY_BUILDINGS %d\n", &count) != 1) { fclose(f); return false; }
+    buildings.clear();
+    for (int i = 0; i < count; i++) {
+        float px,py,pz, sx,sy,sz;
+        int r,g,b,a;
+        if (fscanf(f, "%f %f %f %f %f %f %d %d %d %d\n",
+            &px,&py,&pz, &sx,&sy,&sz, &r,&g,&b,&a) == 10) {
+            buildings.push_back({
+                {px,py,pz}, {sx,sy,sz},
+                {(unsigned char)r,(unsigned char)g,(unsigned char)b,(unsigned char)a}
+            });
+        }
+    }
+    fclose(f);
+    printf("[EDITOR] Loaded %d buildings from %s\n", (int)buildings.size(), path);
+    return true;
+}
+
+// ── Rebuild obstacle boxes from current buildings list ──
+void CityMap::RebuildObstaclesFromBuildings() {
+    // Remove old building obstacles (they're the first N entries)
+    // We clear and rebuild ALL obstacles including base, props etc.
+    obstacles.clear();
+    
+    // Building obstacles
+    for (auto& b : buildings) {
+        float hw = b.size.x / 2.0f;
+        float hd = b.size.z / 2.0f;
+        obstacles.push_back({
+            {b.pos.x - hw, 0, b.pos.z - hd},
+            {b.pos.x + hw, b.size.y, b.pos.z + hd}
+        });
+    }
 }
