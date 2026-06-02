@@ -93,8 +93,17 @@ void Editor::DrawToolbar() {
         x += 69;
     }
 
+    // Play test button (right side)
+    x = sw - 290.0f;
+    if (EdButton({x,y,80,bh}, ">> PLAY", {50,120,50,255}, {70,160,70,255}, 14)) {
+        SaveScene("../maps/editor_scene.txt");
+        shouldPlay = true;
+    }
+    x += 84;
+    DrawLine((int)x, 4, (int)x, ED_TOOLBAR_H-4, COL_BORDER);
+    x += 6;
+
     // View toggles
-    x = sw - 190.0f;
     Color mapC = showMapGeometry ? COL_SELECTED : COL_BTN;
     if (EdButton({x,y,80,bh}, "Map", mapC, COL_BTN_HOV, 13)) showMapGeometry = !showMapGeometry;
     x += 84;

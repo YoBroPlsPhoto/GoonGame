@@ -344,12 +344,18 @@ void Editor::SaveScene(const char* path) {
     ApplyToMap();
     CityMap* city = dynamic_cast<CityMap*>(mapPtr);
     if (city) {
-        city->SaveBuildingsToFile("../maps/city_buildings.dat");
-        city->RebuildObstaclesFromBuildings();
+        if (!city->SaveBuildingsToFile("../maps/city_buildings.dat")) {
+            snprintf(statusMsg, sizeof(statusMsg), "ERROR: Could not save buildings!");
+            statusMsgTimer = 4.0f;
+        }
     }
     // Also save full editor scene for re-opening later
     FILE* f = fopen(path, "w");
-    if (!f) return;
+    if (!f) {
+        snprintf(statusMsg, sizeof(statusMsg), "ERROR: Could not save scene!");
+        statusMsgTimer = 4.0f;
+        return;
+    }
     fprintf(f, "ADASGOONER_SCENE\n");
     fprintf(f, "COUNT %d\n", (int)entities.size());
     for (auto& e : entities) {
@@ -368,6 +374,9 @@ void Editor::SaveScene(const char* path) {
         fprintf(f, "END\n");
     }
     fclose(f);
+    snprintf(statusMsg, sizeof(statusMsg), "SAVED! %d entities", (int)entities.size());
+    statusMsgTimer = 3.0f;
+    printf("[EDITOR] Scene saved to %s\n", path);
 }
 
 void Editor::LoadScene(const char* path) {
@@ -401,10 +410,16 @@ void Editor::LoadScene(const char* path) {
         }
     }
     fclose(f);
+    snprintf(statusMsg, sizeof(statusMsg), "LOADED! %d entities", (int)entities.size());
+    statusMsgTimer = 3.0f;
+    printf("[EDITOR] Scene loaded from %s\n", path);
+    // Sync loaded entities back to the map for rendering
+    ApplyToMap();
 }
 
 // ── Main Update ──
 void Editor::Update() {
+    if (statusMsgTimer > 0) statusMsgTimer -= GetFrameTime();
     UpdateCamera();
     if (editingField < 0) {
         UpdateInput();
@@ -475,6 +490,20 @@ void Editor::Render() {
     DrawInspector();
     DrawStatusBar();
 
+    // Status message toast
+    if (statusMsgTimer > 0) {
+        float alpha = (statusMsgTimer > 0.5f) ? 1.0f : statusMsgTimer / 0.5f;
+        int msgW = MeasureText(statusMsg, 18) + 40;
+        Rectangle vp = GetViewportRect();
+        int mx = (int)(vp.x + vp.width/2 - msgW/2);
+        int my = (int)(vp.y + 20);
+        bool isError = (statusMsg[0] == 'E' && statusMsg[1] == 'R');
+        Color bgCol = isError ? Fade((Color){140,30,30,255}, alpha) : Fade((Color){30,120,50,255}, alpha);
+        DrawRectangle(mx, my, msgW, 32, bgCol);
+        DrawRectangleLinesEx({(float)mx, (float)my, (float)msgW, 32}, 1, Fade(WHITE, alpha*0.5f));
+        DrawText(statusMsg, mx + 20, my + 7, 18, Fade(WHITE, alpha));
+    }
+
     EndDrawing();
 }
 
@@ -496,15 +525,8 @@ void Editor::ApplyToMap() {
                 buildings.push_back(b);
             }
         }
-        // Rebuild obstacles from buildings
-        auto& obstacles = city->GetObstaclesMut();
-        obstacles.clear();
-        for (auto& b : buildings) {
-            float hw = b.size.x/2, hh = b.size.y, hd = b.size.z/2;
-            obstacles.push_back({
-                {b.pos.x - hw, 0, b.pos.z - hd},
-                {b.pos.x + hw, hh, b.pos.z + hd}
-            });
-        }
+        // NOTE: Don't rebuild obstacles here - they will be properly
+        // reconstructed when the game reloads CityMap from the saved data file.
+        // This avoids destroying base/prop/boundary obstacles during editing.
     }
 }

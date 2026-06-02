@@ -2,6 +2,8 @@
 #include <iostream>
 
 NetworkManager::NetworkManager() : mode(Mode::NONE), socket(nullptr), discovery_socket(nullptr), gameStarted(false), localPlayerId(-1), serverName("LAN SERVER"), shouldQuit(false) {
+    remoteBaseHP = 0;
+    remoteWave = 0;
 }
 
 NetworkManager::~NetworkManager() {
@@ -122,36 +124,27 @@ void NetworkManager::Update() {
 void NetworkManager::HandlePacket(size_t bytes_recvd, const asio::ip::udp::endpoint& sender) {
     if (bytes_recvd == sizeof(PlayerData)) {
         PlayerData* data = (PlayerData*)recv_buffer;
+        
+        // Client: check if we've been kicked
         if (data->id == localPlayerId && !data->active && mode == Mode::CLIENT) {
-            // We've been kicked by the server
+            if (data->hp == -999) hostDisconnected = true;
             shouldQuit = true;
             return;
         }
+        
         if (data->id != localPlayerId) {
             if (!data->active) {
+                // Player disconnected
                 remotePlayers.erase(data->id);
                 if (mode == Mode::SERVER) {
-                        known_clients.erase(data->id);
-                    if (data->id == 0) {
-                        // Host disconnected - kick all clients and shut down
-                        // Send disconnect packet for every known player to every client
-                        for (auto const& [cid, endpoint] : known_clients) {
-                            // Send the host's disconnect
-                            socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
-                            // Send a disconnect for the client itself so they know to leave
-                            PlayerData kickData = { cid, "", {0,0,0}, {0,0,0}, 0, 0, false, false };
-                            socket->send_to(asio::buffer(&kickData, sizeof(PlayerData)), endpoint);
-                        }
-                        shouldQuit = true;
-                    } else {
-                        for (auto const& [cid, endpoint] : known_clients) socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
+                    known_clients.erase(data->id);
+                    // Relay disconnect to all other clients
+                    for (auto const& [cid, endpoint] : known_clients) {
+                        socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
                     }
                 }
-                // Client: if server's host (id 0) disconnected, we should also quit
-                if (mode == Mode::CLIENT && data->id == 0) {
-                    shouldQuit = true;
-                }
             } else {
+                // Player update
                 if (mode == Mode::SERVER && remotePlayers.count(data->id)) {
                     // SERVER AUTHORITY: Keep existing HP and Money, only update position and input
                     int oldHp = remotePlayers[data->id].hp;
@@ -161,35 +154,59 @@ void NetworkManager::HandlePacket(size_t bytes_recvd, const asio::ip::udp::endpo
                     remotePlayers[data->id].money = oldMoney;
                 } else {
                     remotePlayers[data->id] = *data;
+                    if (mode == Mode::SERVER && hostPlayerId == -1 && data->id != 0) {
+                        hostPlayerId = data->id;
+                        std::cout << "Assigned Host ID: " << hostPlayerId << std::endl;
+                    }
                 }
                 
                 if (mode == Mode::SERVER) {
                     known_clients[data->id] = sender;
-                    for (auto const& [cid, endpoint] : known_clients) if (cid != data->id) socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
+                    // Relay to all other clients
+                    for (auto const& [cid, endpoint] : known_clients) {
+                        if (cid != data->id) {
+                            socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
+                        }
+                    }
                 }
             }
         }
     } else if (bytes_recvd > sizeof(PlayerData) && mode == Mode::CLIENT) {
-        // WORLD UPDATE: [f:BaseHP][i:Wave][b:Started][i:PlayerCount][PlayerSync...][i:EnemyCount][EnemySync...]
+        // WORLD UPDATE from server
+        // Protocol: [float:BaseHP][int:Wave][int:GameStarted][int:PlayerCount][PlayerSync...][int:EnemyCount][EnemySync...]
+        // ALL fields are 4-byte aligned (no bool!) to prevent alignment bugs
         char* ptr = recv_buffer;
-        remoteBaseHP = *(float*)ptr; ptr += sizeof(float);
-        remoteWave = *(int*)ptr; ptr += sizeof(int);
-        gameStarted = *(bool*)ptr; ptr += sizeof(bool);
+        
+        float baseHP = *(float*)ptr; ptr += sizeof(float);
+        int wave = *(int*)ptr; ptr += sizeof(int);
+        int startedFlag = *(int*)ptr; ptr += sizeof(int);  // int instead of bool for alignment!
+        
+        remoteBaseHP = baseHP;
+        remoteWave = wave;
+        gameStarted = (startedFlag != 0);
         
         int pCount = *(int*)ptr; ptr += sizeof(int);
+        // Sanity check
+        if (pCount < 0 || pCount > 32) return;
+        
         PlayerSyncData* pList = (PlayerSyncData*)ptr;
         for (int i = 0; i < pCount; i++) {
              remotePlayers[pList[i].id].hp = pList[i].hp;
              remotePlayers[pList[i].id].money = pList[i].money;
-             remotePlayers[pList[i].id].id = pList[i].id; // Ensure ID is set
+             remotePlayers[pList[i].id].id = pList[i].id;
              remotePlayers[pList[i].id].active = true;
         }
         ptr += pCount * sizeof(PlayerSyncData);
 
         int eCount = *(int*)ptr; ptr += sizeof(int);
+        // Sanity check
+        if (eCount < 0 || eCount > 200) return;
+        
         EnemySync* eList = (EnemySync*)ptr;
         syncedEnemies.clear();
-        for (int i = 0; i < eCount; i++) syncedEnemies[eList[i].id] = eList[i];
+        for (int i = 0; i < eCount; i++) {
+            syncedEnemies[eList[i].id] = eList[i];
+        }
     }
 }
 
@@ -228,12 +245,13 @@ void NetworkManager::HandleDiscovery() {
 void NetworkManager::SendWorldUpdate(float baseHP, int wave, const std::vector<EnemySync>& enemies, const std::vector<PlayerSyncData>& players) {
     if (mode != Mode::SERVER || !socket) return;
 
-    static char world_buffer[8192];
+    static char world_buffer[16384];
     char* ptr = world_buffer;
     
+    // ALL fields are int/float (4 bytes) for proper alignment
     *(float*)ptr = baseHP; ptr += sizeof(float);
     *(int*)ptr = wave; ptr += sizeof(int);
-    *(bool*)ptr = gameStarted; ptr += sizeof(bool);
+    *(int*)ptr = gameStarted ? 1 : 0; ptr += sizeof(int);  // int instead of bool!
     
     *(int*)ptr = (int)players.size(); ptr += sizeof(int);
     memcpy(ptr, players.data(), players.size() * sizeof(PlayerSyncData));
@@ -247,7 +265,8 @@ void NetworkManager::SendWorldUpdate(float baseHP, int wave, const std::vector<E
 
     size_t total_size = ptr - world_buffer;
     for (auto const& [cid, endpoint] : known_clients) {
-        socket->send_to(asio::buffer(world_buffer, total_size), endpoint);
+        asio::error_code ec;
+        socket->send_to(asio::buffer(world_buffer, total_size), endpoint, 0, ec);
     }
 }
 
@@ -255,11 +274,12 @@ void NetworkManager::SendPlayerUpdate(int id, const char* name, Vector3 pos, Vec
     if (!socket) return;
     PlayerData data = { id, "", pos, target, hp, money, firing, true };
     if (name) strncpy(data.name, name, 31);
+    asio::error_code ec;
     if (mode == Mode::CLIENT) {
-        socket->send_to(asio::buffer(&data, sizeof(PlayerData)), server_target_endpoint);
+        socket->send_to(asio::buffer(&data, sizeof(PlayerData)), server_target_endpoint, 0, ec);
     } else if (mode == Mode::SERVER) {
         for (auto const& [cid, endpoint] : known_clients) {
-            socket->send_to(asio::buffer(&data, sizeof(PlayerData)), endpoint);
+            socket->send_to(asio::buffer(&data, sizeof(PlayerData)), endpoint, 0, ec);
         }
     }
 }
@@ -267,11 +287,16 @@ void NetworkManager::SendPlayerUpdate(int id, const char* name, Vector3 pos, Vec
 void NetworkManager::SendDisconnect(int id) {
     if (!socket) return;
     PlayerData data = { id, "", {0,0,0}, {0,0,0}, 0, 0, false, false }; 
+    asio::error_code ec;
     if (mode == Mode::CLIENT) {
-        socket->send_to(asio::buffer(&data, sizeof(PlayerData)), server_target_endpoint);
+        socket->send_to(asio::buffer(&data, sizeof(PlayerData)), server_target_endpoint, 0, ec);
     } else if (mode == Mode::SERVER) {
         for (auto const& [cid, endpoint] : known_clients) {
-            socket->send_to(asio::buffer(&data, sizeof(PlayerData)), endpoint);
+            socket->send_to(asio::buffer(&data, sizeof(PlayerData)), endpoint, 0, ec);
+            
+            // Kick the client with -999 HP flag
+            PlayerData kickData = { cid, "", {0,0,0}, {0,0,0}, -999, 0, false, false };
+            socket->send_to(asio::buffer(&kickData, sizeof(PlayerData)), endpoint, 0, ec);
         }
     }
 }

@@ -26,6 +26,7 @@ public:
     int joinPort = 1234;
     std::string playerNick = "Gooner";
     std::string hostName = "MY SERVER";
+    bool disconnectedByHost = false;
     bool vsync = true;
     int resIndex = 1; // 0: 800x600, 1: 1280x720, 2: 1600x900, 3: 1920x1080
     bool useWafelModel = false;

@@ -3,6 +3,7 @@
 void Game::UpdateCore() {
 
     bool shopNearby = false;
+    net.localPlayerId = localPlayer.playerId;
     net.Update();
     AdasGooner::globalUseWafelModel = menu.useWafelModel;
 
@@ -29,6 +30,10 @@ void Game::UpdateCore() {
     }
 
     if (net.shouldQuit) {
+      if (net.hostDisconnected) {
+          menu.disconnectedByHost = true;
+          net.hostDisconnected = false;
+      }
       state = GameState::MENU;
       net.shouldQuit = false;
       net.remotePlayers.clear();
@@ -36,9 +41,9 @@ void Game::UpdateCore() {
       net.mode = NetworkManager::Mode::NONE;
     }
 
-    bool inCutscene = false;
-    Vector3 bossPos = {0};
-    std::shared_ptr<Enemy> activeBoss = nullptr;
+    inCutscene = false;
+    bossPos = {0};
+    activeBoss = nullptr;
 
     if (state == GameState::GAME || state == GameState::PAUSED) {
       if (net.mode == NetworkManager::Mode::SERVER) {
@@ -70,6 +75,15 @@ void Game::UpdateCore() {
               break;
             }
           }
+          if (e->type == EnemyType::ADAS_PRIME) {
+            auto prime = std::dynamic_pointer_cast<AdasPrime>(e);
+            if (prime && prime->cutsceneState != PrimeCutscene::FIGHT) {
+              inCutscene = true;
+              bossPos = prime->wardrobePos;
+              activeBoss = prime;
+              break;
+            }
+          }
         }
       } else {
         for (auto const &[id, e] : net.syncedEnemies) {
@@ -87,6 +101,12 @@ void Game::UpdateCore() {
           }
           if (e.type == (int)EnemyType::GANG_BOSS &&
               e.attackTimer != (float)(int)GangCutscene::FIGHT) {
+            inCutscene = true;
+            bossPos = e.pos;
+            break;
+          }
+          if (e.type == (int)EnemyType::ADAS_PRIME &&
+              e.attackTimer != (float)(int)PrimeCutscene::FIGHT) {
             inCutscene = true;
             bossPos = e.pos;
             break;

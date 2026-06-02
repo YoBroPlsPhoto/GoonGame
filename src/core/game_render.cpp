@@ -430,7 +430,8 @@ void Game::Render() {
             gibon->angle = e.angle;
             gibon->craterCreated =
                 ((int)e.attackTimer >= (int)GibonState::IMPACT);
-            gibon->impactCrater = {e.pos, 20.0f};
+            // Crater is fixed at City Base
+            gibon->impactCrater = { (Vector3){0, 0, 150}, 20.0f };
             temp = gibon;
           } else if (e.type == (int)EnemyType::GANG_BOSS) {
             auto gang = std::make_shared<GangBoss>(e.pos, e.id);
@@ -633,8 +634,9 @@ void Game::Render() {
       }
 
       // UI / HUD - UNIFIED SYSTEM
-      DrawRectangle(10, 10, 580, 120, Fade(BLACK, 0.7f));
-      DrawText(TextFormat("FPS: %d | ULTRA GRAPHICS", GetFPS()), 25, 20, 15,
+      if (!inCutscene) {
+          DrawRectangle(10, 10, 580, 120, Fade(BLACK, 0.7f));
+          DrawText(TextFormat("FPS: %d | ULTRA GRAPHICS", GetFPS()), 25, 20, 15,
                LIME);
 
       // --- SNIPER SCOPE OVERLAY ---
@@ -1090,6 +1092,14 @@ void Game::Render() {
         DrawText("PRESS ~ TO CLOSE",
                  sw / 2 - MeasureText("PRESS ~ TO CLOSE", 20) / 2, sh - 50, 20,
                  LIGHTGRAY);
+      } // end of inventory if
+      } else { // end of if (!inCutscene)
+        // Cinematic bars
+        int sw = GetScreenWidth();
+        int sh = GetScreenHeight();
+        int barHeight = sh / 8;
+        DrawRectangle(0, 0, sw, barHeight, BLACK);
+        DrawRectangle(0, sh - barHeight, sw, barHeight, BLACK);
       }
 
       if (state == GameState::PAUSED) {

@@ -94,13 +94,23 @@ void Menu::Draw(bool drawUI) {
     float startY = sh/2.0f - 100.0f;
 
     if (currentState == MenuState::MAIN) {
+        if (disconnectedByHost) {
+            const char* msg = "CONNECTION LOST: HOST DISCONNECTED";
+            int mw = MeasureText(msg, 25);
+            DrawRectangle(sw/2 - mw/2 - 20, startY - 60, mw + 40, 40, Fade(BLACK, 0.8f));
+            DrawText(msg, sw/2 - mw/2, startY - 52, 25, RED);
+        }
+
         if (DrawButton((Rectangle){startX, startY, 300, 60}, "HOST MISSION", DARKGRAY)) {
+            disconnectedByHost = false;
             currentState = MenuState::HOST;
         }
         if (DrawButton((Rectangle){startX, startY + 80, 300, 60}, "JOIN MISSION", DARKGRAY)) {
+            disconnectedByHost = false;
             currentState = MenuState::JOIN;
         }
         if (DrawButton((Rectangle){startX, startY + 160, 300, 60}, "OPTIONS", DARKGRAY)) {
+            disconnectedByHost = false;
             currentState = MenuState::OPTIONS;
         }
         if (DrawButton((Rectangle){startX, startY + 240, 300, 60}, "EXIT", MAROON)) {

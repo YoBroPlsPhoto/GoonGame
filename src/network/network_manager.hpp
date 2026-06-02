@@ -85,7 +85,9 @@ public:
     int localPlayerId;
     std::string serverName;
     bool shouldQuit;
-    int activePort = 0; // Actual port the server is listening on
+    bool hostDisconnected = false;
+    int activePort = 0;
+    int hostPlayerId = -1;
 
 private:
     asio::io_context io_context;
@@ -94,7 +96,7 @@ private:
     asio::ip::udp::endpoint server_target_endpoint;
     asio::ip::udp::socket* discovery_socket;
     
-    char recv_buffer[4096]; // Increased for world state
+    char recv_buffer[16384];
     char disc_buffer[1024];
 
     void HandlePacket(size_t bytes_recvd, const asio::ip::udp::endpoint& sender);

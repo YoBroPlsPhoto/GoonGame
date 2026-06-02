@@ -59,6 +59,7 @@ public:
     void Render();
 
     bool shouldExit = false;
+    bool shouldPlay = false;
 
 private:
     // Camera
@@ -84,6 +85,10 @@ private:
     bool showMapGeometry = true; // render actual map
     int addMenuOpen = 0; // 0=closed, 1=open
     float entityListScroll = 0;
+
+    // Status message (save/load feedback)
+    float statusMsgTimer = 0;
+    char statusMsg[128] = {0};
 
     // Inspector editing
     int editingField = -1; // which field is being text-edited

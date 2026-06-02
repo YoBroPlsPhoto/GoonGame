@@ -144,6 +144,29 @@ void Game::Run() {
                 editor.shouldExit = false;
                 if (IsCursorHidden()) EnableCursor();
             }
+            if (editor.shouldPlay) {
+                editor.shouldPlay = false;
+                // Reload map from saved buildings data — CityMap constructor
+                // loads from file and rebuilds ALL obstacles correctly
+                delete currentMap;
+                currentMap = new CityMap();
+                // Reset game state for play testing
+                baseHP = maxBaseHP;
+                currentWave = 1;
+                enemiesSpawnedSinceStartOfWave = 0;
+                waveActive = true;
+                waveWaitTimer = 0;
+                enemies.clear();
+                vehicles.clear();
+                structures.clear();
+                spawnTimer = 0;
+                inCutscene = false;
+                activeBoss = nullptr;
+                state = GameState::GAME;
+                if (IsCursorHidden()) EnableCursor();
+                DisableCursor();
+                printf("[EDITOR] Play testing map...\n");
+            }
         } else {
             UpdateCore();
             HandleInput();
