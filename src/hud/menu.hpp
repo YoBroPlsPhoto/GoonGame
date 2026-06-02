@@ -23,6 +23,7 @@ public:
     bool shouldStartJoin = false;
     bool shouldToggleFullscreen = false;
     std::string joinIP = "127.0.0.1";
+    int joinPort = 1234;
     std::string playerNick = "Gooner";
     std::string hostName = "MY SERVER";
     bool vsync = true;

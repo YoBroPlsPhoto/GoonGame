@@ -135,8 +135,8 @@ void AdasGooner::Draw() {
         rlTranslatef(position.x, position.y, position.z);
         rlRotatef(angle, 0, 1, 0);
         // Scale and rotation for wafel model
-        rlScalef(0.6f, 0.6f, 0.6f); 
-        DrawModel(wafelModel, (Vector3){0, 10, 0}, 1.0f, WHITE);
+        rlScalef(0.75f, 0.75f, 0.75f); 
+        DrawModel(wafelModel, (Vector3){0, 0, 0}, 1.0f, WHITE);
         rlPopMatrix();
         return;
     }

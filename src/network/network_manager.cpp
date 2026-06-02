@@ -12,6 +12,11 @@ NetworkManager::~NetworkManager() {
 }
 
 bool NetworkManager::StartServer(int port, const std::string& name) {
+    if (socket) {
+        socket->close();
+        delete socket;
+        socket = nullptr;
+    }
     try {
         socket = new asio::ip::udp::socket(io_context, asio::ip::udp::endpoint(asio::ip::udp::v4(), port));
         socket->set_option(asio::socket_base::broadcast(true));
@@ -43,6 +48,11 @@ bool NetworkManager::StartServerAutoPort(int startPort, int maxTries, const std:
 }
 
 bool NetworkManager::StartClient(const std::string& ip, int port) {
+    if (socket) {
+        socket->close();
+        delete socket;
+        socket = nullptr;
+    }
     try {
         socket = new asio::ip::udp::socket(io_context, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0));
         socket->non_blocking(true);
@@ -112,13 +122,34 @@ void NetworkManager::Update() {
 void NetworkManager::HandlePacket(size_t bytes_recvd, const asio::ip::udp::endpoint& sender) {
     if (bytes_recvd == sizeof(PlayerData)) {
         PlayerData* data = (PlayerData*)recv_buffer;
+        if (data->id == localPlayerId && !data->active && mode == Mode::CLIENT) {
+            // We've been kicked by the server
+            shouldQuit = true;
+            return;
+        }
         if (data->id != localPlayerId) {
             if (!data->active) {
                 remotePlayers.erase(data->id);
                 if (mode == Mode::SERVER) {
-                    if (data->id == 0) shouldQuit = true; // Host disconnected
-                    known_clients.erase(data->id);
-                    for (auto const& [cid, endpoint] : known_clients) socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
+                        known_clients.erase(data->id);
+                    if (data->id == 0) {
+                        // Host disconnected - kick all clients and shut down
+                        // Send disconnect packet for every known player to every client
+                        for (auto const& [cid, endpoint] : known_clients) {
+                            // Send the host's disconnect
+                            socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
+                            // Send a disconnect for the client itself so they know to leave
+                            PlayerData kickData = { cid, "", {0,0,0}, {0,0,0}, 0, 0, false, false };
+                            socket->send_to(asio::buffer(&kickData, sizeof(PlayerData)), endpoint);
+                        }
+                        shouldQuit = true;
+                    } else {
+                        for (auto const& [cid, endpoint] : known_clients) socket->send_to(asio::buffer(recv_buffer, bytes_recvd), endpoint);
+                    }
+                }
+                // Client: if server's host (id 0) disconnected, we should also quit
+                if (mode == Mode::CLIENT && data->id == 0) {
+                    shouldQuit = true;
                 }
             } else {
                 if (mode == Mode::SERVER && remotePlayers.count(data->id)) {
@@ -175,8 +206,16 @@ void NetworkManager::HandleDiscovery() {
                 std::string ip = disc_sender.address().to_string();
                 size_t firstColon = msg.find(':');
                 size_t secondColon = msg.find(':', firstColon + 1);
-                std::string sName = (secondColon != std::string::npos) ? msg.substr(secondColon + 1) : "LAN SERVER";
-                discoveredServers[ip] = { ip, 1234, sName, (float)GetTime() };
+                int serverPort = 1234;
+                std::string sName = "LAN SERVER";
+                if (secondColon != std::string::npos) {
+                    try { serverPort = std::stoi(msg.substr(firstColon + 1, secondColon - firstColon - 1)); } catch (...) {}
+                    sName = msg.substr(secondColon + 1);
+                } else if (firstColon != std::string::npos) {
+                    try { serverPort = std::stoi(msg.substr(firstColon + 1)); } catch (...) {}
+                }
+                std::string serverKey = ip + ":" + std::to_string(serverPort);
+                discoveredServers[serverKey] = { ip, serverPort, sName, (float)GetTime() };
             }
         }
     }
