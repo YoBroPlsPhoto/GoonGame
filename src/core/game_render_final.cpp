@@ -172,13 +172,13 @@ void Game::RenderFinal() {
     if (state == GameState::MENU) {
 
       if (menu.shouldStartHost) {
-        if (net.StartServer(1234, menu.hostName))
+        if (net.StartServerAutoPort(1234, 10, menu.hostName))
           state = GameState::LOBBY;
         menu.shouldStartHost = false;
         localPlayer.isAdmin = true;
       }
       if (menu.shouldStartJoin) {
-        if (net.StartClient(menu.joinIP, 1234))
+        if (net.StartClient(menu.joinIP, menu.joinPort > 0 ? menu.joinPort : 1234))
           state = GameState::LOBBY;
         menu.shouldStartJoin = false;
       }
@@ -194,7 +194,7 @@ void Game::RenderFinal() {
           DrawText(TextFormat("%s (%s)", info.name.c_str(), info.ip.c_str()),
                    (int)rec.x + 15, (int)rec.y + 12, 18, RAYWHITE);
           if (hov && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            if (net.StartClient(info.ip, 1234))
+            if (net.StartClient(info.ip, info.port))
               state = GameState::LOBBY;
           }
           listY += 55;

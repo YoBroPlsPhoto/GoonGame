@@ -31,6 +31,8 @@ void Game::UpdateCore() {
     if (net.shouldQuit) {
       state = GameState::MENU;
       net.shouldQuit = false;
+      net.remotePlayers.clear();
+      net.syncedEnemies.clear();
       net.mode = NetworkManager::Mode::NONE;
     }
 

@@ -1381,7 +1381,7 @@ void Game::Render3D() {
           menu.Update();
           menu.Draw();
           if (menu.shouldStartHost) {
-              if (net.StartServer(1234)) state = GameState::LOBBY;
+              if (net.StartServerAutoPort(1234, 10)) state = GameState::LOBBY;
               menu.shouldStartHost = false;
           }
           
@@ -1393,7 +1393,7 @@ void Game::Render3D() {
             DrawRectangleRounded(rec, 0.2f, 8, Fade(hov ? SKYBLUE : DARKBLUE, 0.8f));
             DrawText(TextFormat("%s (%s)", info.name.c_str(), info.ip.c_str()), (int)rec.x + 15, (int)rec.y + 12, 18, RAYWHITE);
             if (hov && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                if (net.StartClient(info.ip, 1234)) state = GameState::LOBBY;
+                if (net.StartClient(info.ip, info.port)) state = GameState::LOBBY;
             }
             listY += 55;
           }
