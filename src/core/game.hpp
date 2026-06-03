@@ -40,10 +40,24 @@ public:
     void Run();
 
 private:
+    struct AdasDrop {
+        Vector3 position;
+        float radius;
+        float fallSpeed;
+    };
+
+    struct AdasStain {
+        Vector3 position;
+        float radius;
+    };
+
     void UpdateCore();
     void HandleInput();
     void UpdateNetworkAndEnemies();
     void Render();
+    void UpdateAdasHazards();
+    void DrawAdasHazards();
+    bool IsLocalPlayerInAdasStain() const;
 
     NetworkManager net;
     GameState state;
@@ -102,4 +116,7 @@ private:
     bool inCutscene;
     Vector3 bossPos;
     std::shared_ptr<Enemy> activeBoss;
+    std::vector<AdasDrop> adasDrops;
+    std::vector<AdasStain> adasStains;
+    float adasDropTimer;
 };

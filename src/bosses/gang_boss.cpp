@@ -5,6 +5,22 @@
 #include <algorithm>
 #include <cstdlib>
 
+namespace {
+constexpr float BASE_HALF_SIZE = 25.0f;
+constexpr float BASE_EDGE_AGGRO_DISTANCE = 8.0f;
+
+bool IsInsideBaseFootprint(Vector3 pos, Vector3 basePos) {
+    return fabsf(pos.x - basePos.x) <= BASE_HALF_SIZE &&
+           fabsf(pos.z - basePos.z) <= BASE_HALF_SIZE;
+}
+
+float DistanceToBaseFootprint(Vector3 pos, Vector3 basePos) {
+    float dx = fmaxf(0.0f, fabsf(pos.x - basePos.x) - BASE_HALF_SIZE);
+    float dz = fmaxf(0.0f, fabsf(pos.z - basePos.z) - BASE_HALF_SIZE);
+    return sqrtf(dx * dx + dz * dz);
+}
+}
+
 GangBoss::GangBoss(Vector3 spawnPos, int enemyId)
     : Enemy(spawnPos, EnemyType::GANG_BOSS, WeaponType::MACHETE, enemyId) {
     cutsceneState = GangCutscene::WARDROBE_FALLING;
@@ -214,8 +230,10 @@ void GangBoss::Update(const std::vector<TargetInfo>& players, float* baseHp, Vec
             // --- ATTACK LOGIC ---
             float closestPlayerDist = 999.0f;
             int* nearestHp = nullptr;
+            bool atBaseEdge = DistanceToBaseFootprint(m.position, basePos) <= BASE_EDGE_AGGRO_DISTANCE;
             for (const auto& p : players) {
                 if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
                 float d = Vector3Distance(p.pos, m.position);
                 if (d < closestPlayerDist) {
                     closestPlayerDist = d;
@@ -266,6 +284,7 @@ void GangBoss::Update(const std::vector<TargetInfo>& players, float* baseHp, Vec
                 // AOE damage to players (collateral)
                 for (const auto& p : players) {
                     if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                    if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
                     float d = Vector3Distance(p.pos, m.position);
                     if (d < 12.0f && p.hp) {
                         float falloff = 1.0f - (d / 12.0f);

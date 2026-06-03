@@ -45,6 +45,7 @@ public:
 
     float attackTimer;
     float walkTimer; // To keep track of movement phase
+    float tankCrushCooldown = 0.0f; // Cooldown for tank crush damage
 private:
     float attackCooldown;
 };

@@ -404,6 +404,9 @@ void Game::UpdateNetworkAndEnemies() {
                                          return !e->active;
                                        }),
                         enemies.end());
+
+          UpdateAdasHazards();
+
           for (auto it = vehicles.begin(); it != vehicles.end();) {
             auto &v = *it;
             v->Update(GetFrameTime());
@@ -431,12 +434,29 @@ void Game::UpdateNetworkAndEnemies() {
                 if (!e->active || e->hp <= 0)
                   continue;
                 if (CheckCollisionBoxes(tankBox, e->GetBoundingBox())) {
-                  float crushDamage =
-                      (1000.0f + fabsf(tank->speed) * 4000.0f) * GetFrameTime();
-                  float oldHp = e->hp;
-                  e->TakeDamage((int)crushDamage);
-                  if (e->hp <= 0 && oldHp > 0) {
-                    localPlayer.AddMoney(100);
+                  bool isBoss = (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS || 
+                                 e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME);
+                  
+                  float currentSpeedVal = fabsf(tank->speed);
+                  float threshold = isBoss ? 0.76f : 0.40f; // 76 is 95% of 80, 40 is half
+                  
+                  if (currentSpeedVal >= threshold) {
+                    float crushDamage = 1500.0f;
+                    float oldHp = e->hp;
+                    e->TakeDamage((int)crushDamage);
+                    
+                    float speedSign = tank->speed > 0 ? 1.0f : -1.0f;
+                    if (isBoss) {
+                        tank->speed = 0.30f * speedSign;
+                    } else {
+                        currentSpeedVal -= 0.05f;
+                        if (currentSpeedVal < 0.30f) currentSpeedVal = 0.30f;
+                        tank->speed = currentSpeedVal * speedSign;
+                    }
+
+                    if (e->hp <= 0 && oldHp > 0) {
+                      localPlayer.AddMoney(100);
+                    }
                   }
                 }
               }
@@ -483,4 +503,60 @@ void Game::UpdateNetworkAndEnemies() {
                            localPlayer.hp, localPlayer.money,
                            (firingStickyTimer > 0));
     
+}
+
+void Game::UpdateAdasHazards() {
+  float dt = GetFrameTime();
+  std::shared_ptr<AdasGooner> adas = nullptr;
+
+  for (auto &e : enemies) {
+    if (e->type == EnemyType::BOSS && e->active && e->hp > 0) {
+      adas = std::dynamic_pointer_cast<AdasGooner>(e);
+      break;
+    }
+  }
+
+  if (!adas) {
+    adasDrops.clear();
+    adasStains.clear();
+    adasDropTimer = 0.0f;
+    return;
+  }
+
+  if (adas->hp < adas->maxHp / 2 &&
+      adas->cutsceneState == CutsceneState::FINISHED) {
+    adasDropTimer -= dt;
+    if (adasDropTimer <= 0.0f) {
+      adasDropTimer = 1.4f;
+      Vector3 target = {
+          localPlayer.position.x + (float)GetRandomValue(-9000, 9000) / 100.0f,
+          95.0f,
+          localPlayer.position.z + (float)GetRandomValue(-9000, 9000) / 100.0f};
+      target.x = std::max(-230.0f, std::min(230.0f, target.x));
+      target.z = std::max(-520.0f, std::min(260.0f, target.z));
+      adasDrops.push_back({target, (float)GetRandomValue(8, 14), 42.0f});
+    }
+  }
+
+  for (auto &drop : adasDrops) {
+    drop.position.y -= drop.fallSpeed * dt;
+  }
+
+  for (auto it = adasDrops.begin(); it != adasDrops.end();) {
+    if (it->position.y <= 0.4f) {
+      adasStains.push_back({(Vector3){it->position.x, 0.08f, it->position.z},
+                            it->radius * 1.7f});
+      effects.SpawnHitSparks((Vector3){it->position.x, 0.8f, it->position.z},
+                             20);
+      it = adasDrops.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  const size_t maxStains = 24;
+  if (adasStains.size() > maxStains) {
+    adasStains.erase(adasStains.begin(),
+                     adasStains.begin() + (adasStains.size() - maxStains));
+  }
 }

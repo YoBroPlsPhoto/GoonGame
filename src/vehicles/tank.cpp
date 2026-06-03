@@ -5,8 +5,8 @@
 
 Tank::Tank(Vector3 pos) : Vehicle(pos, VehicleType::SUV) {
   // Override vehicle stats for tank
-  maxSpeed = 0.3f; // Slightly faster but with inertia
-  acceleration = 0.008f;
+  maxSpeed = 0.8f; // Much faster
+  acceleration = 0.003f; // Very slow acceleration
   health = 50000;
   maxHealth = 50000;
   bodyColor = {45, 55, 35, 255}; // Dark military olive

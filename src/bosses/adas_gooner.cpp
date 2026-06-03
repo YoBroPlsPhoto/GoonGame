@@ -2,6 +2,23 @@
 #include "rlgl.h"
 #include "raymath.h"
 #include <iostream>
+#include <cmath>
+
+namespace {
+constexpr float BASE_HALF_SIZE = 25.0f;
+constexpr float BASE_EDGE_AGGRO_DISTANCE = 8.0f;
+
+bool IsInsideBaseFootprint(Vector3 pos, Vector3 basePos) {
+    return fabsf(pos.x - basePos.x) <= BASE_HALF_SIZE &&
+           fabsf(pos.z - basePos.z) <= BASE_HALF_SIZE;
+}
+
+float DistanceToBaseFootprint(Vector3 pos, Vector3 basePos) {
+    float dx = fmaxf(0.0f, fabsf(pos.x - basePos.x) - BASE_HALF_SIZE);
+    float dz = fmaxf(0.0f, fabsf(pos.z - basePos.z) - BASE_HALF_SIZE);
+    return sqrtf(dx * dx + dz * dz);
+}
+}
 
 Model AdasGooner::wafelModel;
 bool AdasGooner::wafelModelLoaded = false;
@@ -67,8 +84,10 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
         // --- SPECIAL ATTACKS ---
         shockwaveTimer += GetFrameTime();
         if (shockwaveTimer > 10.0f) {
+            bool atBaseEdge = DistanceToBaseFootprint(position, basePos) <= BASE_EDGE_AGGRO_DISTANCE;
             for (const auto& p : players) {
                 if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
                 float d = Vector3Distance(position, p.pos);
                 if (d < 20.0f) {
                     // Push logic (vague since we don't have direct access to their pos as reference in a way to push them back to server?)
@@ -108,6 +127,25 @@ void AdasGooner::Draw() {
             doorAngle = (cutsceneTimer / 5.0f) * 110.0f; // Opens gradually
         } else if (cutsceneState == CutsceneState::WALKING_OUT || cutsceneState == CutsceneState::FINISHED) {
             doorAngle = 110.0f;
+        }
+
+        // White stain spreads around the wardrobe as it opens.
+        if (cutsceneState == CutsceneState::WARDROBE_OPENING ||
+            cutsceneState == CutsceneState::WALKING_OUT) {
+            float openProgress = doorAngle / 110.0f;
+            float pulse = sinf((float)GetTime() * 8.0f) * 0.08f + 0.92f;
+            float mainRadius = (8.0f + openProgress * 18.0f) * pulse;
+
+            DrawCylinder((Vector3){0.0f, 0.08f, 0.0f}, mainRadius,
+                         mainRadius, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){-6.0f, 0.10f, -1.0f}, mainRadius * 0.55f,
+                         mainRadius * 0.55f, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){6.0f, 0.12f, -1.0f}, mainRadius * 0.55f,
+                         mainRadius * 0.55f, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){0.0f, 0.14f, -7.0f}, mainRadius * 0.65f,
+                         mainRadius * 0.65f, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){0.0f, 0.16f, 5.0f}, mainRadius * 0.45f,
+                         mainRadius * 0.45f, 0.08f, 64, WHITE);
         }
 
         // Left door
