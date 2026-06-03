@@ -126,6 +126,7 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
         }
 
         if (!inCutscene) {
+          localPlayer.speed = IsLocalPlayerInAdasStain() ? 0.06f : 0.15f;
           localPlayer.Update();
           for (const auto &box : currentMap->GetObstacles())
             localPlayer.HandleCollision(box);
@@ -534,4 +535,20 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
       }
 
       }
+}
+
+bool Game::IsLocalPlayerInAdasStain() const {
+  if (localPlayer.inVehicle || localPlayer.isFlying) {
+    return false;
+  }
+
+  for (const auto &stain : adasStains) {
+    Vector2 playerPos = {localPlayer.position.x, localPlayer.position.z};
+    Vector2 stainPos = {stain.position.x, stain.position.z};
+    if (Vector2Distance(playerPos, stainPos) <= stain.radius) {
+      return true;
+    }
+  }
+
+  return false;
 }

@@ -1,5 +1,45 @@
 #include "core/game.hpp"
 
+static const char *GetBossDetectedName(EnemyType type) {
+  switch (type) {
+  case EnemyType::BOSS:
+    return "ADAS GOONER";
+  case EnemyType::GIBON_BOSS:
+    return "GIBON RZYGACZ";
+  case EnemyType::GANG_BOSS:
+    return "THE GANG";
+  case EnemyType::ADAS_PRIME:
+    return "ADAS PRIME";
+  default:
+    return "BOSS";
+  }
+}
+
+void Game::DrawAdasHazards() {
+  for (const auto &stain : adasStains) {
+    DrawCylinder(stain.position, stain.radius, stain.radius, 0.08f, 64, WHITE);
+    DrawCylinder((Vector3){stain.position.x - stain.radius * 0.35f, 0.10f,
+                           stain.position.z + stain.radius * 0.15f},
+                 stain.radius * 0.45f, stain.radius * 0.45f, 0.08f, 48,
+                 WHITE);
+    DrawCylinder((Vector3){stain.position.x + stain.radius * 0.32f, 0.12f,
+                           stain.position.z - stain.radius * 0.25f},
+                 stain.radius * 0.38f, stain.radius * 0.38f, 0.08f, 48,
+                 WHITE);
+  }
+
+  for (const auto &drop : adasDrops) {
+    DrawSphere(drop.position, drop.radius * 0.45f, WHITE);
+    DrawSphere((Vector3){drop.position.x, drop.position.y + drop.radius * 0.35f,
+                         drop.position.z},
+               drop.radius * 0.25f, WHITE);
+    DrawCylinder((Vector3){drop.position.x, drop.position.y + drop.radius,
+                           drop.position.z},
+                 drop.radius * 0.18f, drop.radius * 0.04f, drop.radius * 1.8f,
+                 24, WHITE);
+  }
+}
+
 void Game::Render() {
 
     // --- PASS 1: SHADOW MAP (Depth) ---
@@ -48,9 +88,6 @@ void Game::Render() {
 
     if (state == GameState::GAME || state == GameState::PAUSED) {
       Camera3D activeCam = localPlayer.camera;
-
-      float vehicleCamOrbitH = 0.0f;
-      float vehicleCamOrbitV = 0.3f;
 
       if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
         auto v = vehicles[localPlayer.vehicleIndex];
@@ -340,6 +377,7 @@ void Game::Render() {
         }
       }
       EndShaderMode();
+      DrawAdasHazards();
 
       // --- PLACEMENT GHOST PREVIEW ---
       if (localPlayer.currentWeapon && !localPlayer.inVehicle &&
@@ -742,7 +780,7 @@ void Game::Render() {
       DrawRectangle(320, 45, 250, 15, DARKGRAY);
       DrawRectangle(320, 45, (int)(250 * playerRatio), 15, RED);
 
-      // VEHICLE HP
+      // VEHICLE HP & SPEED
       if (localPlayer.inVehicle && localPlayer.vehicleIndex >= 0) {
         auto v = vehicles[localPlayer.vehicleIndex];
         int displayVehHp = std::max(0, v->health);
@@ -752,27 +790,33 @@ void Game::Render() {
                  25, 65, 18, SKYBLUE);
         DrawRectangle(320, 65, 250, 15, DARKGRAY);
         DrawRectangle(320, 65, (int)(250 * vehRatio), 15, BLUE);
+
+        // VEHICLE SPEED BAR
+        float speedRatio = std::max(0.0f, std::min(1.0f, fabsf(v->speed) / v->maxSpeed));
+        DrawText(TextFormat("SPEED: %d km/h", (int)(fabsf(v->speed) * 100)), 25, 85, 18, LIME);
+        DrawRectangle(320, 85, 250, 15, DARKGRAY);
+        DrawRectangle(320, 85, (int)(250 * speedRatio), 15, GREEN);
       }
 
       // BASE HP
       float baseRatio = std::max(0.0f, std::min(1.0f, baseHP / maxBaseHP));
       DrawText(TextFormat("BASE HP: %d / %d", (int)std::max(0.0f, baseHP),
                           (int)maxBaseHP),
-               25, 80, 20, GOLD);
-      DrawRectangle(320, 80, 250, 20, DARKGRAY);
-      DrawRectangle(320, 80, (int)(250 * baseRatio), 20, YELLOW);
+               25, 105, 20, GOLD);
+      DrawRectangle(320, 105, 250, 20, DARKGRAY);
+      DrawRectangle(320, 105, (int)(250 * baseRatio), 20, YELLOW);
 
       // WAVE INFO
-      DrawText(TextFormat("WAVE: %d", currentWave), 25, 110, 20, ORANGE);
+      DrawText(TextFormat("WAVE: %d", currentWave), 25, 135, 20, ORANGE);
       if (!waveActive) {
-        DrawText(TextFormat("NEXT WAVE IN: %.1fs", waveWaitTimer), 180, 110, 20,
+        DrawText(TextFormat("NEXT WAVE IN: %.1fs", waveWaitTimer), 180, 135, 20,
                  SKYBLUE);
       } else {
-        DrawText(TextFormat("ENEMIES: %d", (int)enemies.size()), 180, 110, 20,
+        DrawText(TextFormat("ENEMIES: %d", (int)enemies.size()), 180, 135, 20,
                  LIGHTGRAY);
       }
       if (!structures.empty()) {
-        DrawText(TextFormat("DEFENSES: %d", (int)structures.size()), 400, 110,
+        DrawText(TextFormat("DEFENSES: %d", (int)structures.size()), 400, 135,
                  20, (Color){180, 150, 100, 255});
       }
 
@@ -1186,6 +1230,38 @@ void Game::Render() {
     // 2. Draw HUD and Menu at NATIVE RESOLUTION
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
+
+    if ((state == GameState::GAME || state == GameState::PAUSED) &&
+        inCutscene) {
+      EnemyType detectedBossType = EnemyType::BOSS;
+      if (activeBoss) {
+        detectedBossType = activeBoss->type;
+      } else {
+        for (auto const &[id, e] : net.syncedEnemies) {
+          EnemyType type = (EnemyType)e.type;
+          if (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS ||
+              type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME) {
+            detectedBossType = type;
+            break;
+          }
+        }
+      }
+
+      const char *alertText =
+          TextFormat("%s DETECTED", GetBossDetectedName(detectedBossType));
+      float blink = sinf((float)GetTime() * 12.0f) * 0.5f + 0.5f;
+      float alpha = 0.25f + blink * 0.75f;
+      int fontSize = std::max(34, sw / 28);
+      int textWidth = MeasureText(alertText, fontSize);
+      int x = sw / 2 - textWidth / 2;
+      int y = sh / 2 - fontSize / 2;
+      Color alertRed = Fade((Color){255, 20, 20, 255}, alpha);
+
+      DrawRectangle(0, y - 16, sw, fontSize + 32,
+                    Fade((Color){40, 0, 0, 255}, 0.35f * alpha));
+      DrawText(alertText, x + 3, y + 3, fontSize, Fade(BLACK, alpha));
+      DrawText(alertText, x, y, fontSize, alertRed);
+    }
 
     if (state == GameState::MENU || state == GameState::LOBBY) {
       menu.Update();

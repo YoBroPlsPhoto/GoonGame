@@ -571,11 +571,29 @@ void Game::HandleShop() {
                   for (auto& e : enemies) {
                       if (!e->active || e->hp <= 0) continue;
                       if (CheckCollisionBoxes(tankBox, e->GetBoundingBox())) {
-                          float crushDamage = (1000.0f + fabsf(tank->speed) * 4000.0f) * GetFrameTime();
-                          float oldHp = e->hp;
-                          e->TakeDamage((int)crushDamage);
-                          if (e->hp <= 0 && oldHp > 0) {
-                              localPlayer.AddMoney(100);
+                          bool isBoss = (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS || 
+                                         e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME);
+                          
+                          float currentSpeedVal = fabsf(tank->speed);
+                          float threshold = isBoss ? 0.76f : 0.40f; 
+                          
+                          if (currentSpeedVal >= threshold) {
+                              float crushDamage = 1500.0f;
+                              float oldHp = e->hp;
+                              e->TakeDamage((int)crushDamage);
+                              
+                              float speedSign = tank->speed > 0 ? 1.0f : -1.0f;
+                              if (isBoss) {
+                                  tank->speed = 0.30f * speedSign;
+                              } else {
+                                  currentSpeedVal -= 0.05f;
+                                  if (currentSpeedVal < 0.30f) currentSpeedVal = 0.30f;
+                                  tank->speed = currentSpeedVal * speedSign;
+                              }
+
+                              if (e->hp <= 0 && oldHp > 0) {
+                                  localPlayer.AddMoney(100);
+                              }
                           }
                       }
                   }

@@ -5,6 +5,22 @@
 #include <algorithm>
 #include <cstdlib>
 
+namespace {
+constexpr float BASE_HALF_SIZE = 25.0f;
+constexpr float BASE_EDGE_AGGRO_DISTANCE = 8.0f;
+
+bool IsInsideBaseFootprint(Vector3 pos, Vector3 basePos) {
+    return fabsf(pos.x - basePos.x) <= BASE_HALF_SIZE &&
+           fabsf(pos.z - basePos.z) <= BASE_HALF_SIZE;
+}
+
+float DistanceToBaseFootprint(Vector3 pos, Vector3 basePos) {
+    float dx = fmaxf(0.0f, fabsf(pos.x - basePos.x) - BASE_HALF_SIZE);
+    float dz = fmaxf(0.0f, fabsf(pos.z - basePos.z) - BASE_HALF_SIZE);
+    return sqrtf(dx * dx + dz * dz);
+}
+}
+
 GibonRzygacz::GibonRzygacz(Vector3 landingPos, int enemyId) 
     : Enemy(landingPos, EnemyType::GIBON_BOSS, WeaponType::EXPLOSIVE, enemyId) {
     gibonState = GibonState::FALLING;
@@ -111,33 +127,41 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         // --- NORMAL COMBAT BEHAVIOR ---
         float timeScale = dt * 60.0f;
         
-        // Find nearest target (player or base)
-        Vector3 targetPos = basePos;
+        // Find nearest player (for attack targeting only, NOT for movement)
+        Vector3 attackTargetPos = basePos;
         int* targetHp = nullptr;
-        bool targetingPlayer = false;
+        bool foundPlayer = false;
+        bool atBaseEdge = DistanceToBaseFootprint(position, basePos) <= BASE_EDGE_AGGRO_DISTANCE;
         
         float closestDist = 1000.0f;
         for (const auto& p : players) {
             if (!p.active || (p.hp && *p.hp <= 0)) continue;
+            if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
             float d = Vector3Distance(p.pos, position);
             if (d < 40.0f && d < closestDist) {
                 closestDist = d;
-                targetPos = p.pos;
+                attackTargetPos = p.pos;
                 targetHp = p.hp;
-                targetingPlayer = true;
+                foundPlayer = true;
             }
         }
         
-        Vector3 direction = Vector3Subtract(targetPos, position);
-        direction.y = 0;
-        float dist = Vector3Length(direction);
+        // MOVEMENT: Always go straight to the base
+        Vector3 moveDirection = Vector3Subtract(basePos, position);
+        moveDirection.y = 0;
+        float distToBase = Vector3Length(moveDirection);
         
-        float stopDist = targetingPlayer ? 3.0f : 27.0f;
+        // Calculate distance to base edge (AABB)
+        float dx = fmaxf(0.0f, fabsf(position.x - basePos.x) - BASE_HALF_SIZE);
+        float dz = fmaxf(0.0f, fabsf(position.z - basePos.z) - BASE_HALF_SIZE);
+        float distToBaseEdge = sqrtf(dx * dx + dz * dz);
+        
+        float stopDist = 3.0f; // Stop right at the base edge
         
         isMoving = false;
-        if (dist > stopDist) {
+        if (distToBaseEdge > stopDist) {
             isMoving = true;
-            Vector3 moveDir = Vector3Normalize(direction);
+            Vector3 moveDir = Vector3Normalize(moveDirection);
             angle = atan2f(moveDir.x, moveDir.z) * RAD2DEG;
             
             rollSpeed = speed;
@@ -148,31 +172,39 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
             rollAngle += rollSpeed * timeScale * 20.0f;
         } else {
             rollSpeed *= 0.95f;
-            angle = atan2f(direction.x, direction.z) * RAD2DEG;
+            // Face nearest player when stopped at base
+            if (foundPlayer) {
+                Vector3 faceDir = Vector3Subtract(attackTargetPos, position);
+                faceDir.y = 0;
+                angle = atan2f(faceDir.x, faceDir.z) * RAD2DEG;
+            }
         }
         
         if (isMoving) walkTimer += dt;
         else walkTimer = 0;
         
-        // --- CRUSH ATTACK (rolling over players) ---
+        // --- CRUSH ATTACK (rolling over players on the way) ---
         for (const auto& p : players) {
             if (!p.active || (p.hp && *p.hp <= 0)) continue;
+            if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
             float d = Vector3Distance(p.pos, position);
             if (d < 5.0f && p.hp) {
                 *p.hp -= (int)(150 * dt); // Constant crush damage while overlapping
             }
         }
         
-        // --- TOXIC VOMIT RAIN ATTACK ---
+        // --- TOXIC VOMIT RAIN ATTACK (targets players!) ---
         vomitCooldown -= dt;
         if (vomitCooldown <= 0) {
             vomitCooldown = 2.5f; // Every 2.5 seconds
             
+            // Vomit targets area around the nearest player
+            Vector3 vomitTarget = foundPlayer ? attackTargetPos : basePos;
+            
             // Spawn a barrage of toxic vomit projectiles that rain down
             for (int i = 0; i < 12; i++) {
                 ToxicVomit v;
-                // Spread around the boss, targeting area around players
-                Vector3 target = targetPos;
+                Vector3 target = vomitTarget;
                 target.x += (float)(rand() % 60 - 30);
                 target.z += (float)(rand() % 60 - 30);
                 
@@ -184,9 +216,9 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
             }
         }
         
-        // --- BASE DAMAGE (melee range) ---
+        // --- BASE DAMAGE (when at base edge) ---
         if (attackTimer > 0) attackTimer -= dt;
-        if (!targetingPlayer && dist < 31.0f && attackTimer <= 0) {
+        if (distToBaseEdge < 6.0f && attackTimer <= 0) {
             if (baseHp && *baseHp > 0) {
                 *baseHp -= 200; // Heavy base damage
                 if (*baseHp < 0) *baseHp = 0;
@@ -216,6 +248,8 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
             // Damage players near impact
             for (const auto& p : players) {
                 if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                if (DistanceToBaseFootprint(v.position, basePos) <= BASE_EDGE_AGGRO_DISTANCE &&
+                    !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
                 float d = Vector3Distance(p.pos, v.position);
                 if (d < 5.0f && p.hp) {
                     float falloff = 1.0f - (d / 5.0f);

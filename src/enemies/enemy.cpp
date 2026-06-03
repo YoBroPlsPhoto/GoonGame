@@ -1,5 +1,22 @@
 #include "enemy.hpp"
 #include "raymath.h"
+#include <cmath>
+
+namespace {
+constexpr float BASE_HALF_SIZE = 25.0f;
+constexpr float BASE_EDGE_AGGRO_DISTANCE = 8.0f;
+
+bool IsInsideBaseFootprint(Vector3 pos, Vector3 basePos) {
+    return fabsf(pos.x - basePos.x) <= BASE_HALF_SIZE &&
+           fabsf(pos.z - basePos.z) <= BASE_HALF_SIZE;
+}
+
+float DistanceToBaseFootprint(Vector3 pos, Vector3 basePos) {
+    float dx = fmaxf(0.0f, fabsf(pos.x - basePos.x) - BASE_HALF_SIZE);
+    float dz = fmaxf(0.0f, fabsf(pos.z - basePos.z) - BASE_HALF_SIZE);
+    return sqrtf(dx * dx + dz * dz);
+}
+}
 
 Enemy::Enemy(Vector3 startPos, EnemyType t, WeaponType w, int enemyId) {
     position = startPos;
@@ -44,6 +61,10 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     if (!active) return;
     if (hp <= 0) { active = false; return; }
 
+    if (tankCrushCooldown > 0) {
+        tankCrushCooldown -= GetFrameTime();
+    }
+
     if (isMoving) walkTimer += GetFrameTime();
     else walkTimer = 0;
 
@@ -51,11 +72,13 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     int* targetHp = nullptr;
     bool targetingPlayer = false;
     bool targetingStructure = false;
+    bool atBaseEdge = DistanceToBaseFootprint(position, basePos) <= BASE_EDGE_AGGRO_DISTANCE;
 
     // Target nearest player if close and alive
     float closestDist = 1000.0f;
     for (const auto& p : players) {
         if (!p.active || (p.hp && *p.hp <= 0)) continue;
+        if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
         float d = Vector3Distance(p.pos, position);
         if (d < 35.0f && d < closestDist) { // Increased detection range
             closestDist = d;
@@ -66,16 +89,17 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
         }
     }
 
-    // Bosses should NOT follow the player, they only face them to attack
+    // Bosses should NOT follow the player - they march straight to the base
+    // But they still TARGET players with attacks when nearby
     Vector3 moveTarget = targetPos;
-    if (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS || 
-        type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME) {
+    bool bossMovesToBase = (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS || 
+                            type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME);
+    if (bossMovesToBase) {
         moveTarget = basePos; // Always move towards base
-        targetingPlayer = false; // Disable stopDist = 1.5 logic for movement check
     }
 
-    Vector3 direction = Vector3Subtract(targetPos, position); // For facing/attacking
-    Vector3 moveDirection = Vector3Subtract(moveTarget, position); // For moving
+    Vector3 direction = Vector3Subtract(targetPos, position); // For facing/attacking (targets player if close)
+    Vector3 moveDirection = Vector3Subtract(moveTarget, position); // For moving (base for bosses)
     direction.y = 0;
     moveDirection.y = 0;
     
@@ -84,9 +108,15 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
 
     bool targetingEntity = targetingPlayer || targetingStructure;
 
-    // Stop distance: 28m for base (don't enter!), 2.5m for entities
-    float stopDist = targetingEntity ? 2.5f : ((type == EnemyType::SHOOTER || type == EnemyType::BOSS) ? 40.0f : 28.0f);
-    if (!targetingEntity && moveDist < 28.0f) moveDist = 0; // Strict base boundary
+    // Stop distance for movement
+    float stopDist;
+    if (bossMovesToBase) {
+        // Bosses stop at the base edge (28m from center = base footprint edge)
+        stopDist = 28.0f;
+    } else {
+        stopDist = targetingEntity ? 2.5f : ((type == EnemyType::SHOOTER) ? 40.0f : 28.0f);
+    }
+    if (!targetingEntity && !bossMovesToBase && moveDist < 28.0f) moveDist = 0; // Strict base boundary for non-bosses
 
     float dt = GetFrameTime();
     float timeScale = dt * 60.0f;
@@ -95,7 +125,12 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     if (moveDist > stopDist) {
         isMoving = true;
         Vector3 moveDir = Vector3Normalize(moveDirection);
-        angle = atan2f(direction.x, direction.z) * RAD2DEG; // Face target (player or base)
+        // Bosses face towards base while walking, but face player for attack when close
+        if (bossMovesToBase && !targetingEntity) {
+            angle = atan2f(moveDir.x, moveDir.z) * RAD2DEG; // Face movement direction (base)
+        } else {
+            angle = atan2f(direction.x, direction.z) * RAD2DEG; // Face target (player)
+        }
         position.x += moveDir.x * speed * timeScale;
         position.z += moveDir.z * speed * timeScale;
         velocity = {moveDir.x * speed * timeScale, 0, moveDir.z * speed * timeScale};
@@ -108,28 +143,56 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     if (attackTimer > 0) attackTimer -= GetFrameTime();
 
     if (attackTimer <= 0) {
-        float attackRange = targetingPlayer ? 2.5f : ((type == EnemyType::SHOOTER || type == EnemyType::BOSS) ? 45.0f : 31.0f);
-        
-        if (dist < attackRange) {
-            float damage = (weapon == WeaponType::KATANA) ? 60 : (weapon == WeaponType::MACHETE ? 40 : 20);
-            if (type == EnemyType::BOSS) damage *= 3.0f;
-
-            if (targetingEntity && targetHp) {
+        // Bosses at the base: attack the base when close enough
+        if (bossMovesToBase) {
+            // Calculate distance to base edge
+            float dx = fmaxf(0.0f, fabsf(position.x - basePos.x) - BASE_HALF_SIZE);
+            float dz = fmaxf(0.0f, fabsf(position.z - basePos.z) - BASE_HALF_SIZE);
+            float distToBaseEdge = sqrtf(dx * dx + dz * dz);
+            
+            // Attack nearby player if within range
+            if (targetingEntity && dist < 15.0f && targetHp) {
+                float damage = (weapon == WeaponType::KATANA) ? 60 : (weapon == WeaponType::MACHETE ? 40 : 20);
+                if (type == EnemyType::BOSS) damage *= 3.0f;
                 if (targetingPlayer) {
-                    *targetHp -= (int)damage / 5; // Players take less damage than the base
+                    *targetHp -= (int)damage / 5;
                 } else {
-                    *targetHp -= (int)damage; // Structures take full damage
+                    *targetHp -= (int)damage;
                 }
-            } else if (baseHp && *baseHp > 0) {
+                attackTimer = attackCooldown * 0.5f;
+            }
+            // Attack the base when at its edge
+            else if (distToBaseEdge < 6.0f && baseHp && *baseHp > 0) {
+                float damage = (weapon == WeaponType::KATANA) ? 60 : (weapon == WeaponType::MACHETE ? 40 : 20);
+                if (type == EnemyType::BOSS) damage *= 3.0f;
                 *baseHp -= damage;
                 if (*baseHp < 0) *baseHp = 0;
+                attackTimer = attackCooldown * 0.5f;
             }
+        } else {
+            // Normal enemy attack logic
+            float attackRange = targetingPlayer ? 2.5f : ((type == EnemyType::SHOOTER) ? 45.0f : 31.0f);
             
-            if (type == EnemyType::KAMIKAZE) {
-                hp = 0; // Explode on hit
-                active = false;
+            if (dist < attackRange) {
+                float damage = (weapon == WeaponType::KATANA) ? 60 : (weapon == WeaponType::MACHETE ? 40 : 20);
+
+                if (targetingEntity && targetHp) {
+                    if (targetingPlayer) {
+                        *targetHp -= (int)damage / 5;
+                    } else {
+                        *targetHp -= (int)damage;
+                    }
+                } else if (baseHp && *baseHp > 0) {
+                    *baseHp -= damage;
+                    if (*baseHp < 0) *baseHp = 0;
+                }
+                
+                if (type == EnemyType::KAMIKAZE) {
+                    hp = 0;
+                    active = false;
+                }
+                attackTimer = attackCooldown * 0.5f; 
             }
-            attackTimer = attackCooldown * 0.5f; 
         }
     }
 }

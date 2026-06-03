@@ -34,13 +34,14 @@ Game::Game() : localPlayer((Vector3){0.0f, 2.0f, 0.0f}, 0), currentMap(new CityM
     inCutscene = false;
     bossPos = {0};
     activeBoss = nullptr;
+    adasDropTimer = 0.0f;
 }
 Game::~Game() {}
 
 void Game::Init() {
 
   goonMusic = LoadMusicStream("../audio/goon.mp3");
-  gibonMusic = LoadMusicStream("../audio/gibon.mp3");
+  gibonMusic = LoadMusicStream("../audio/GibonUlaniecPart3 (1).mp3");
   
   
   SetExitKey(KEY_NULL);
@@ -162,6 +163,9 @@ void Game::Run() {
                 spawnTimer = 0;
                 inCutscene = false;
                 activeBoss = nullptr;
+                adasDrops.clear();
+                adasStains.clear();
+                adasDropTimer = 0.0f;
                 state = GameState::GAME;
                 if (IsCursorHidden()) EnableCursor();
                 DisableCursor();
