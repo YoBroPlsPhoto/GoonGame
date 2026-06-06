@@ -364,7 +364,6 @@ void Game::UpdateNetworkAndEnemies() {
           }
 
           // REMOTE PLAYER SHOOTING (PROCESS ON SERVER)
-          std::map<int, float> remoteFireCooldowns;
           for (auto &[id, data] : net.remotePlayers) {
             if (remoteFireCooldowns[id] > 0)
               remoteFireCooldowns[id] -= GetFrameTime();
@@ -466,10 +465,10 @@ void Game::UpdateNetworkAndEnemies() {
 
           std::vector<PlayerSyncData> pSync;
           pSync.push_back(
-              {localPlayer.playerId, localPlayer.hp, localPlayer.money});
+              {localPlayer.playerId, localPlayer.hp, localPlayer.money, localPlayer.isAdmin});
           for (auto &[id, data] : net.remotePlayers) {
             if (data.active)
-              pSync.push_back({id, data.hp, data.money});
+              pSync.push_back({id, data.hp, data.money, data.admin});
           }
 
           net.gameStarted =
@@ -492,7 +491,6 @@ void Game::UpdateNetworkAndEnemies() {
                          (localPlayer.currentWeapon->IsAutomatic()
                               ? IsMouseButtonDown(MOUSE_LEFT_BUTTON)
                               : IsMouseButtonPressed(MOUSE_LEFT_BUTTON));
-      float firingStickyTimer = 0.0f;
       if (isFiringNow)
         firingStickyTimer = 0.1f;
       else if (firingStickyTimer > 0)

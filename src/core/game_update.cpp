@@ -3,8 +3,36 @@
 void Game::UpdateCore() {
 
     bool shopNearby = false;
-    net.localPlayerId = localPlayer.playerId;
+    net.SetLocalPlayerName(menu.playerNick);
+    if (menu.currentState != MenuState::RELAY_SETTINGS) {
+      net.SetLobbyServer(menu.relayHost, menu.relayPort);
+    }
+    
+    if (menu.shouldTestRelay) {
+        net.SetLobbyServer(menu.relayHost, menu.relayPort);
+        net.SendRelayPing();
+        menu.shouldTestRelay = false;
+    }
+    
+    if (menu.relayPingMs == -2.0f) {
+        if (net.currentPingMs >= 0.0f) {
+            menu.relayPingMs = net.currentPingMs;
+            net.currentPingMs = -1.0f; // Consume
+        } else if (GetTime() - net.lastPingTime > 2.0f) {
+            menu.relayPingMs = -3.0f; // Timeout
+            net.pinging = false;
+        }
+    }
+
+    if (net.mode != NetworkManager::Mode::CLIENT) {
+      net.localPlayerId = localPlayer.playerId;
+      net.localPlayerAdmin = localPlayer.isAdmin;
+    }
     net.Update();
+    if (net.mode == NetworkManager::Mode::CLIENT && net.localPlayerId >= 0) {
+      localPlayer.playerId = net.localPlayerId;
+      localPlayer.isAdmin = net.localPlayerAdmin;
+    }
     AdasGooner::globalUseWafelModel = menu.useWafelModel;
 
     // --- APPLY SETTINGS AT START OF FRAME ---
@@ -39,6 +67,8 @@ void Game::UpdateCore() {
       net.remotePlayers.clear();
       net.syncedEnemies.clear();
       net.mode = NetworkManager::Mode::NONE;
+      localPlayer.playerId = 0;
+      localPlayer.isAdmin = false;
     }
 
     inCutscene = false;

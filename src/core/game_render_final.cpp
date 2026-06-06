@@ -172,8 +172,10 @@ void Game::RenderFinal() {
     if (state == GameState::MENU) {
 
       if (menu.shouldStartHost) {
-        if (net.StartServerAutoPort(1234, 10, menu.hostName))
-          state = GameState::LOBBY;
+        // Try relay first, fallback to direct
+        bool started = net.StartServerRelay(menu.hostName);
+        if (!started) started = net.StartServerAutoPort(1234, 10, menu.hostName);
+        if (started) state = GameState::LOBBY;
         menu.shouldStartHost = false;
         localPlayer.isAdmin = true;
       }
@@ -186,16 +188,26 @@ void Game::RenderFinal() {
       if (menu.currentState == MenuState::JOIN) {
         int listY = 480;
         for (auto const &[ip, info] : net.discoveredServers) {
-          Rectangle rec = {(float)GetScreenWidth() / 2 - 150, (float)listY, 300,
+          Rectangle rec = {(float)GetScreenWidth() / 2 - 150, (float)listY, 340,
                            45};
           bool hov = CheckCollisionPointRec(GetMousePosition(), rec);
+          Color bgCol = info.relayRoomId != 0 ? DARKPURPLE : DARKBLUE;
           DrawRectangleRounded(rec, 0.2f, 8,
-                               Fade(hov ? SKYBLUE : DARKBLUE, 0.8f));
-          DrawText(TextFormat("%s (%s)", info.name.c_str(), info.ip.c_str()),
-                   (int)rec.x + 15, (int)rec.y + 12, 18, RAYWHITE);
+                               Fade(hov ? SKYBLUE : bgCol, 0.8f));
+          const char* tag = info.relayRoomId != 0 ? "[RELAY]" : (info.internet ? "[NET]" : "[LAN]");
+          DrawText(TextFormat("%s %s (%s)", tag, info.name.c_str(), info.ip.c_str()),
+                   (int)rec.x + 10, (int)rec.y + 5, 16, RAYWHITE);
+          DrawText(TextFormat("%d/%d players%s", info.players, info.maxPlayers,
+                              info.started ? " [IN GAME]" : ""),
+                   (int)rec.x + 10, (int)rec.y + 25, 14, LIGHTGRAY);
           if (hov && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            if (net.StartClient(info.ip, info.port))
-              state = GameState::LOBBY;
+            bool joined = false;
+            if (info.relayRoomId != 0) {
+              joined = net.StartClientRelay(info.relayRoomId);
+            } else {
+              joined = net.StartClient(info.ip, info.port);
+            }
+            if (joined) state = GameState::LOBBY;
           }
           listY += 55;
           if (listY > GetScreenHeight() - 150)

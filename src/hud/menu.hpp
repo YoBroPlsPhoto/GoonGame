@@ -10,7 +10,7 @@
 #include "../bosses/adas_gooner.hpp"
 #include "../enemies/enemy.hpp"
 
-enum class MenuState { MAIN, HOST, JOIN, OPTIONS, ADMIN_SETTINGS };
+enum class MenuState { MAIN, HOST, JOIN, OPTIONS, RELAY_SETTINGS, ADMIN_SETTINGS };
 
 class Menu {
 public:
@@ -22,10 +22,14 @@ public:
     bool shouldStartHost = false;
     bool shouldStartJoin = false;
     bool shouldToggleFullscreen = false;
+    bool shouldTestRelay = false;
+    float relayPingMs = -1.0f;
     std::string joinIP = "127.0.0.1";
     int joinPort = 1234;
     std::string playerNick = "Gooner";
     std::string hostName = "MY SERVER";
+    std::string relayHost = "127.0.0.1";
+    int relayPort = 1240;
     bool disconnectedByHost = false;
     bool vsync = true;
     int resIndex = 1; // 0: 800x600, 1: 1280x720, 2: 1600x900, 3: 1920x1080
@@ -36,6 +40,7 @@ private:
     Camera3D menuCam;
     float camAngle = 0.0f;
     float time = 0.0f;
+    int relayEditField = 0;
     
     std::unique_ptr<AdasGooner> bgAdas;
     std::vector<std::shared_ptr<Enemy>> minions;

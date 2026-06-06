@@ -602,9 +602,9 @@ void Game::HandleShop() {
           }
           
           std::vector<PlayerSyncData> pSync;
-          pSync.push_back({ localPlayer.playerId, localPlayer.hp, localPlayer.money });
+          pSync.push_back({ localPlayer.playerId, localPlayer.hp, localPlayer.money, localPlayer.isAdmin });
           for (auto& [id, data] : net.remotePlayers) {
-              if (data.active) pSync.push_back({ id, data.hp, data.money });
+              if (data.active) pSync.push_back({ id, data.hp, data.money, data.admin });
           }
 
           net.gameStarted = (state == GameState::GAME || state == GameState::PAUSED);
@@ -1436,4 +1436,3 @@ void Game::RenderHUD() {
 void Game::RenderBlit() {
 
 }
-

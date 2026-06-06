@@ -995,10 +995,10 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
 
           std::vector<PlayerSyncData> pSync;
           pSync.push_back(
-              {localPlayer.playerId, localPlayer.hp, localPlayer.money});
+              {localPlayer.playerId, localPlayer.hp, localPlayer.money, localPlayer.isAdmin});
           for (auto &[id, data] : net.remotePlayers) {
             if (data.active)
-              pSync.push_back({id, data.hp, data.money});
+              pSync.push_back({id, data.hp, data.money, data.admin});
           }
 
           net.gameStarted =

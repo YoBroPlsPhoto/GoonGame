@@ -52,7 +52,7 @@ void Game::Init() {
   
   
   
-  localPlayer.playerId = (int)(GetTime() * 1000);
+  localPlayer.playerId = 0;
 
   
   

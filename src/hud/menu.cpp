@@ -3,6 +3,7 @@
 #include "rlgl.h"
 #include <fstream>
 #include <iostream>
+#include <cctype>
 
 Menu::Menu() {
     menuCam.position = (Vector3){ 20.0f, 12.0f, 20.0f };
@@ -143,7 +144,7 @@ void Menu::Draw(bool drawUI) {
         
         int key = GetCharPressed();
         while (key > 0) {
-            if (joinIP.length() < 15) joinIP += (char)key;
+            if (joinIP.length() < 64) joinIP += (char)key;
             key = GetCharPressed();
         }
         if (IsKeyPressed(KEY_BACKSPACE) && !joinIP.empty()) joinIP.pop_back();
@@ -153,8 +154,10 @@ void Menu::Draw(bool drawUI) {
             shouldStartJoin = true;
         }
         
-        DrawText("LOCAL MISSIONS:", (int)startX, (int)startY + 160, 20, GOLD);
-        // Note: Server list drawing moved to main.cpp to access NetworkManager, 
+        DrawText("AVAILABLE LOBBIES:", (int)startX - 70, (int)startY + 160, 20, GOLD);
+        DrawText(TextFormat("LOBBY SERVER: %s:%d", relayHost.c_str(), relayPort),
+                 (int)startX - 115, (int)startY + 185, 16, LIGHTGRAY);
+        // Note: Server list drawing moved to Game::Render to access NetworkManager,
         // but we leave space here for it.
 
         if (DrawButton((Rectangle){startX, (float)sh - 100, 300, 60}, "BACK", DARKGRAY)) {
@@ -196,10 +199,88 @@ void Menu::Draw(bool drawUI) {
         if (DrawButton((Rectangle){startX, startY + 280, 300, 40}, "TOGGLE FULLSCREEN", DARKBLUE)) {
             shouldToggleFullscreen = true;
         }
+
+        if (DrawButton((Rectangle){startX, startY + 330, 300, 40}, "RELAY SERVER", DARKPURPLE)) {
+            SaveSettings();
+            currentState = MenuState::RELAY_SETTINGS;
+        }
         
-        if (DrawButton((Rectangle){startX, startY + 330, 300, 60}, "BACK", DARKGRAY)) {
+        if (DrawButton((Rectangle){startX, startY + 380, 300, 60}, "BACK", DARKGRAY)) {
             SaveSettings();
             currentState = MenuState::MAIN;
+        }
+    } else if (currentState == MenuState::RELAY_SETTINGS) {
+        DrawText("LOBBY / RELAY SERVER:", (int)startX - 25, (int)startY - 55, 20, GOLD);
+
+        Rectangle hostBox = {startX - 80, startY, 460, 52};
+        Rectangle portBox = {startX - 80, startY + 95, 180, 52};
+        Vector2 mouse = GetMousePosition();
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            if (CheckCollisionPointRec(mouse, hostBox)) relayEditField = 0;
+            if (CheckCollisionPointRec(mouse, portBox)) relayEditField = 1;
+        }
+        if (IsKeyPressed(KEY_TAB)) relayEditField = (relayEditField + 1) % 2;
+
+        DrawText("ADDRESS:", (int)hostBox.x, (int)hostBox.y - 25, 18, RAYWHITE);
+        DrawRectangleRec(hostBox, relayEditField == 0 ? SKYBLUE : WHITE);
+        DrawText(relayHost.c_str(), (int)hostBox.x + 10, (int)hostBox.y + 13, 24, BLACK);
+
+        DrawText("PORT:", (int)portBox.x, (int)portBox.y - 25, 18, RAYWHITE);
+        DrawRectangleRec(portBox, relayEditField == 1 ? SKYBLUE : WHITE);
+        DrawText(TextFormat("%d", relayPort), (int)portBox.x + 10, (int)portBox.y + 13, 24, BLACK);
+
+        int key = GetCharPressed();
+        while (key > 0) {
+            if (relayEditField == 0) {
+                if (relayHost.length() < 128 && key >= 32 && key < 127) relayHost += (char)key;
+            } else if (std::isdigit(key)) {
+                std::string portText = TextFormat("%d", relayPort);
+                if (relayPort == 0) portText.clear();
+                if (portText.length() < 5) {
+                    portText += (char)key;
+                    try { relayPort = std::stoi(portText); } catch (...) { relayPort = 1240; }
+                    if (relayPort > 65535) relayPort = 65535;
+                }
+            }
+            key = GetCharPressed();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE)) {
+            if (relayEditField == 0 && !relayHost.empty()) {
+                relayHost.pop_back();
+            } else if (relayEditField == 1) {
+                std::string portText = TextFormat("%d", relayPort);
+                if (!portText.empty()) portText.pop_back();
+                relayPort = portText.empty() ? 0 : std::stoi(portText);
+            }
+        }
+
+        DrawText("Used for internet lobby list and hosted lobby registration.", (int)startX - 110, (int)startY + 165, 16, LIGHTGRAY);
+        
+        if (DrawButton((Rectangle){startX, startY + 195, 300, 45}, "TEST CONNECTION", ORANGE)) {
+            if (relayHost.empty()) relayHost = "127.0.0.1";
+            if (relayPort <= 0) relayPort = 1240;
+            SaveSettings();
+            relayPingMs = -2.0f; // Pinging state
+            shouldTestRelay = true;
+        }
+
+        if (relayPingMs == -2.0f) {
+            DrawText("PINGING...", (int)startX + 105, (int)startY + 250, 18, YELLOW);
+        } else if (relayPingMs >= 0.0f) {
+            DrawText(TextFormat("PING: %.0f ms", relayPingMs), (int)startX + 100, (int)startY + 250, 18, GREEN);
+        } else if (relayPingMs == -3.0f) {
+            DrawText("FAILED", (int)startX + 120, (int)startY + 250, 18, RED);
+        }
+
+        if (DrawButton((Rectangle){startX, startY + 280, 300, 50}, "SAVE", GREEN)) {
+            if (relayHost.empty()) relayHost = "127.0.0.1";
+            if (relayPort <= 0) relayPort = 1240;
+            SaveSettings();
+            currentState = MenuState::OPTIONS;
+        }
+        if (DrawButton((Rectangle){startX, startY + 340, 300, 50}, "BACK", DARKGRAY)) {
+            SaveSettings();
+            currentState = MenuState::OPTIONS;
         }
     }
 }
@@ -214,6 +295,8 @@ void Menu::SaveSettings() {
         f << vsync << "\n";
         f << resIndex << "\n";
         f << useWafelModel << "\n";
+        f << relayHost << "\n";
+        f << relayPort << "\n";
         f.close();
     }
 }
@@ -232,6 +315,9 @@ void Menu::LoadSettings() {
         if (std::getline(f, vsyncStr)) vsync = (vsyncStr == "1");
         if (std::getline(f, resStr)) try { resIndex = std::stoi(resStr); } catch(...) {}
         if (std::getline(f, modelStr)) useWafelModel = (modelStr == "1");
+        if (!std::getline(f, relayHost)) relayHost = "127.0.0.1";
+        std::string relayPortStr;
+        if (std::getline(f, relayPortStr)) try { relayPort = std::stoi(relayPortStr); } catch(...) { relayPort = 1240; }
         f.close();
     }
 }
