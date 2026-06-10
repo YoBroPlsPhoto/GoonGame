@@ -353,7 +353,7 @@ void CityMap::DrawMainBase(int currentWave) {
   DrawCylinderEx((Vector3){standPos.x + 2.0f, 2.1f, standPos.z}, (Vector3){standPos.x + 2.0f, 3.9f, standPos.z}, 0.6f, 0.6f, 16, (Color){220, 120, 0, 254});
 
   // --- WEAPON SCREENS (TIERED BY FLOOR) ---
-  for (int shopLevel = 0; shopLevel <= 2; shopLevel++) {
+  for (int shopLevel = 0; shopLevel <= 3; shopLevel++) {
       float sy = shopLevel * fh; // Y position of the floor
       Vector3 screenPos = {bp.x - 24.5f, sy + 4.0f, bp.z};
       
@@ -367,24 +367,24 @@ void CityMap::DrawMainBase(int currentWave) {
                
       EndShaderMode(); // Text shouldn't use the lighting shader
       
-      int requiredWave = (shopLevel == 1) ? 5 : (shopLevel == 2) ? 10 : 1;
+      int requiredWave = (shopLevel == 1) ? 10 : (shopLevel == 2) ? 20 : (shopLevel == 3) ? 30 : 1;
       
       if (currentWave < requiredWave) {
-          DrawText3D(TextFormat("=== TIER %d LOCKED ===", shopLevel + 1),
+          DrawText3D(TextFormat("=== TIER %d LOCKED ===", shopLevel),
                      (Vector3){screenPos.x + 0.3f, screenPos.y + 2.8f, screenPos.z},
                      0.6f, 0.1f, RED);
           DrawText3D(TextFormat("UNLOCKS AT WAVE: %d", requiredWave),
                      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.0f, screenPos.z},
                      0.5f, 0.1f, ORANGE);
       } else {
-          DrawText3D(TextFormat("=== WEAPON TIER %d ===", shopLevel + 1),
+          DrawText3D(TextFormat("=== WEAPON TIER %d ===", shopLevel),
                      (Vector3){screenPos.x + 0.3f, screenPos.y + 2.8f, screenPos.z},
                      0.45f, 0.1f, GOLD);
                      
           float col1Z = screenPos.z - 4.5f;
           float col2Z = screenPos.z + 4.5f;
           
-          if (shopLevel == 0) { // TIER 1 (Floor 0)
+          if (shopLevel == 0) { // TIER 0 (Floor 0)
               DrawText3D("GLOCK: FREE",     (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z}, 0.35f, 0.1f, LIGHTGRAY);
               DrawText3D("REVOLVER: $1000", (Vector3){screenPos.x + 0.3f, screenPos.y + 0.2f, col1Z}, 0.35f, 0.1f, WHITE);
               DrawText3D("AK-47: $1500",    (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, WHITE);
@@ -392,22 +392,27 @@ void CityMap::DrawMainBase(int currentWave) {
               
               DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
           }
-          else if (shopLevel == 1) { // TIER 2 (Floor 1)
+          else if (shopLevel == 1) { // TIER 1 (Floor 1)
               DrawText3D("MINIGUN: $5000",  (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z}, 0.35f, 0.1f, ORANGE);
               DrawText3D("RPG: $12000",     (Vector3){screenPos.x + 0.3f, screenPos.y + 0.2f, col1Z}, 0.35f, 0.1f, RED);
               DrawText3D("AWP: $8000",      (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, SKYBLUE);
-              DrawText3D("WALL: $800",      (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col1Z}, 0.35f, 0.1f, BROWN);
+              DrawText3D("WALL T1: $800",   (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col1Z}, 0.35f, 0.1f, BROWN);
               
               DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
-              DrawText3D("TURRET: $3000",   (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col2Z}, 0.35f, 0.1f, VIOLET);
+              DrawText3D("TURRET T1: $3000",(Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col2Z}, 0.35f, 0.1f, VIOLET);
           }
-          else if (shopLevel == 2) { // TIER 3 (Floor 2)
-              DrawText3D("SUPER RPG? (WIP)",(Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z}, 0.35f, 0.1f, PINK);
-              
+          else if (shopLevel == 2) { // TIER 2 (Floor 2)
+              DrawText3D("WALL T2: $1600",  (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, BROWN);
               DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
+              DrawText3D("TURRET T2: $6000",(Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col2Z}, 0.35f, 0.1f, VIOLET);
+          }
+          else if (shopLevel == 3) { // TIER 3 (Floor 3)
+              DrawText3D("WALL T3: $3200",  (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, BROWN);
+              DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
+              DrawText3D("TURRET T3: $12000",(Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col2Z}, 0.35f, 0.1f, VIOLET);
           }
           
-          DrawText3D(TextFormat(">>> PRESS 'E' TO BUY (TIER %d) <<<", shopLevel + 1),
+          DrawText3D(TextFormat(">>> PRESS 'E' TO BUY (TIER %d) <<<", shopLevel),
                      (Vector3){screenPos.x + 0.3f, screenPos.y - 3.2f, screenPos.z},
                      0.22f, 0.1f, LIME);
       }

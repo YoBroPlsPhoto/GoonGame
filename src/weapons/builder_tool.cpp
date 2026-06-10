@@ -1,9 +1,17 @@
 #include "builder_tool.hpp"
 #include "rlgl.h"
 
-BuilderTool::BuilderTool(int t) {
+#include <stdio.h>
+
+BuilderTool::BuilderTool(int t, int tier) {
     buildType = t;
-    name = (t == 0) ? "WALL SCH." : "TURRET SCH.";
+    this->tier = tier;
+    if (t == 0) {
+        snprintf(nameBuf, sizeof(nameBuf), "WALL TIER %d", tier);
+    } else {
+        snprintf(nameBuf, sizeof(nameBuf), "TURRET TIER %d", tier);
+    }
+    name = nameBuf;
     magSize = 1; currentAmmo = 1; reserveAmmo = 0; maxReserve = 0;
     attackCooldown = 0.3f;
 }
