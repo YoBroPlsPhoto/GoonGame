@@ -431,9 +431,9 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
 
         if (shopNearby && IsKeyPressed(KEY_E)) {
           int shopLevel = (int)(shopHit.point.y / 8.0f);
-          if (shopLevel > 2)
-            shopLevel = 2; // Clamp
-          int requiredWave = (shopLevel == 1) ? 5 : (shopLevel == 2) ? 10 : 1;
+          if (shopLevel > 3)
+            shopLevel = 3; // Clamp
+          int requiredWave = (shopLevel == 1) ? 10 : (shopLevel == 2) ? 20 : (shopLevel == 3) ? 30 : 1;
 
           if (currentWave >= requiredWave) {
             float offsetY = shopHit.point.y - (shopLevel * 8.0f);
@@ -474,7 +474,7 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   newWep = new AWP();
                 } else if (offsetY > 1.2f) {
                   cost = 800;
-                  newWep = new BuilderTool(0);
+                  newWep = new BuilderTool(0, shopLevel);
                 } // WALL
               } else {
                 if (offsetY > 4.8f) {
@@ -482,16 +482,37 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   buyAmmo = true;
                 } else if (offsetY > 2.4f) {
                   cost = 3000;
-                  newWep = new BuilderTool(1);
+                  newWep = new BuilderTool(1, shopLevel);
                 } // TURRET
               }
-            } else if (shopLevel == 2) { // TIER 3
+            } else if (shopLevel == 2) { // TIER 2
               if (shopHit.point.z < bp.z) {
-                // Work in progress
+                if (offsetY > 2.4f && offsetY <= 4.8f) {
+                  cost = 1600;
+                  newWep = new BuilderTool(0, shopLevel);
+                }
               } else {
                 if (offsetY > 4.8f) {
                   cost = 500;
                   buyAmmo = true;
+                } else if (offsetY > 2.4f) {
+                  cost = 6000;
+                  newWep = new BuilderTool(1, shopLevel);
+                }
+              }
+            } else if (shopLevel == 3) { // TIER 3
+              if (shopHit.point.z < bp.z) {
+                if (offsetY > 2.4f && offsetY <= 4.8f) {
+                  cost = 3200;
+                  newWep = new BuilderTool(0, shopLevel);
+                }
+              } else {
+                if (offsetY > 4.8f) {
+                  cost = 500;
+                  buyAmmo = true;
+                } else if (offsetY > 2.4f) {
+                  cost = 12000;
+                  newWep = new BuilderTool(1, shopLevel);
                 }
               }
             }

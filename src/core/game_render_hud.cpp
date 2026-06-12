@@ -420,7 +420,9 @@ void Game::RenderHUD() {
               DrawRectangleLinesEx(slot, 2, LIME);
 
             const char *wName = "WEAPON";
-            if (w->magSize == 17)
+            if (strncmp(w->name, "TURRET", 6) == 0 || strncmp(w->name, "WALL", 4) == 0)
+              wName = w->name;
+            else if (w->magSize == 17)
               wName = "GLOCK";
             else if (w->magSize == 30)
               wName = "AK47";
@@ -529,7 +531,9 @@ void Game::RenderHUD() {
                                isEquipped ? LIME : (isHovered ? WHITE : BLACK));
 
           const char *wName = "WEAPON";
-          if (localPlayer.inventory[i]->magSize == 17)
+          if (strncmp(localPlayer.inventory[i]->name, "TURRET", 6) == 0 || strncmp(localPlayer.inventory[i]->name, "WALL", 4) == 0)
+            wName = localPlayer.inventory[i]->name;
+          else if (localPlayer.inventory[i]->magSize == 17)
             wName = "GLOCK";
           else if (localPlayer.inventory[i]->magSize == 30)
             wName = "AK47";

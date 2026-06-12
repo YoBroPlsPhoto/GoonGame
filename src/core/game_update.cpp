@@ -168,5 +168,57 @@ void Game::UpdateCore() {
     }
     localPlayer.camera.fovy = fovToUse;
 
+    // --- BOSS MUSIC MANAGEMENT ---
+    // Check every frame if any boss is alive on the map
+    bool needGoonMusic = false;
+    bool needGibonMusic = false;
+
+    if (state == GameState::GAME || state == GameState::PAUSED) {
+      if (net.mode == NetworkManager::Mode::SERVER) {
+        for (auto &e : enemies) {
+          if (!e->active || e->hp <= 0) continue;
+          if (e->type == EnemyType::BOSS || e->type == EnemyType::GANG_BOSS ||
+              e->type == EnemyType::ADAS_PRIME) {
+            needGoonMusic = true;
+          }
+          if (e->type == EnemyType::GIBON_BOSS) {
+            needGibonMusic = true;
+          }
+        }
+      } else {
+        // Client side: check synced enemies
+        for (auto const &[id, e] : net.syncedEnemies) {
+          if (e.type == (int)EnemyType::BOSS || e.type == (int)EnemyType::GANG_BOSS ||
+              e.type == (int)EnemyType::ADAS_PRIME) {
+            needGoonMusic = true;
+          }
+          if (e.type == (int)EnemyType::GIBON_BOSS) {
+            needGibonMusic = true;
+          }
+        }
+      }
+    }
+
+    // Start or stop goon music based on boss presence
+    if (needGoonMusic && !goonMusicPlaying) {
+      PlayMusicStream(goonMusic);
+      goonMusicPlaying = true;
+    } else if (!needGoonMusic && goonMusicPlaying) {
+      StopMusicStream(goonMusic);
+      goonMusicPlaying = false;
+    }
+
+    // Start or stop gibon music based on boss presence
+    if (needGibonMusic && !gibonMusicPlaying) {
+      PlayMusicStream(gibonMusic);
+      gibonMusicPlaying = true;
+    } else if (!needGibonMusic && gibonMusicPlaying) {
+      StopMusicStream(gibonMusic);
+      gibonMusicPlaying = false;
+    }
+
+    // Keep streams updated
+    if (goonMusicPlaying) UpdateMusicStream(goonMusic);
+    if (gibonMusicPlaying) UpdateMusicStream(gibonMusic);
     
 }

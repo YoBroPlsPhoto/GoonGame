@@ -430,9 +430,9 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
 
         if (shopNearby && IsKeyPressed(KEY_E)) {
           int shopLevel = (int)(shopHit.point.y / 8.0f);
-          if (shopLevel > 2)
-            shopLevel = 2; // Clamp
-          int requiredWave = (shopLevel == 1) ? 5 : (shopLevel == 2) ? 10 : 1;
+          if (shopLevel > 3)
+            shopLevel = 3; // Clamp
+          int requiredWave = (shopLevel == 1) ? 10 : (shopLevel == 2) ? 20 : (shopLevel == 3) ? 30 : 1;
 
           if (currentWave >= requiredWave) {
             float offsetY = shopHit.point.y - (shopLevel * 8.0f);
@@ -473,7 +473,7 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   newWep = new AWP();
                 } else if (offsetY > 1.2f) {
                   cost = 800;
-                  newWep = new BuilderTool(0);
+                  newWep = new BuilderTool(0, shopLevel);
                 } // WALL
               } else {
                 if (offsetY > 4.8f) {
@@ -481,16 +481,37 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   buyAmmo = true;
                 } else if (offsetY > 2.4f) {
                   cost = 3000;
-                  newWep = new BuilderTool(1);
+                  newWep = new BuilderTool(1, shopLevel);
                 } // TURRET
               }
-            } else if (shopLevel == 2) { // TIER 3
+            } else if (shopLevel == 2) { // TIER 2
               if (shopHit.point.z < bp.z) {
-                // Work in progress
+                if (offsetY > 2.4f && offsetY <= 4.8f) {
+                  cost = 1600;
+                  newWep = new BuilderTool(0, shopLevel);
+                }
               } else {
                 if (offsetY > 4.8f) {
                   cost = 500;
                   buyAmmo = true;
+                } else if (offsetY > 2.4f) {
+                  cost = 6000;
+                  newWep = new BuilderTool(1, shopLevel);
+                }
+              }
+            } else if (shopLevel == 3) { // TIER 3
+              if (shopHit.point.z < bp.z) {
+                if (offsetY > 2.4f && offsetY <= 4.8f) {
+                  cost = 3200;
+                  newWep = new BuilderTool(0, shopLevel);
+                }
+              } else {
+                if (offsetY > 4.8f) {
+                  cost = 500;
+                  buyAmmo = true;
+                } else if (offsetY > 2.4f) {
+                  cost = 12000;
+                  newWep = new BuilderTool(1, shopLevel);
                 }
               }
             }
@@ -559,10 +580,6 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   Vector3 primeSpawn = {0.0f, 0.1f, -400.0f};
                   enemies.push_back(std::make_shared<AdasPrime>(
                       primeSpawn, ++enemyIdCounter));
-                  if (!goonMusicPlaying) {
-                    PlayMusicStream(goonMusic);
-                    goonMusicPlaying = true;
-                  }
                 } else {
                   // Spawn guards for the prime
                   EnemyType gt = (GetRandomValue(0, 1) == 0 ? EnemyType::TANK
@@ -584,19 +601,11 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   Vector3 gibonLanding = {0.0f, 0.1f, -450.0f};
                   enemies.push_back(std::make_shared<GibonRzygacz>(
                       gibonLanding, ++enemyIdCounter));
-                  if (!gibonMusicPlaying) {
-                    PlayMusicStream(gibonMusic);
-                    gibonMusicPlaying = true;
-                  }
                 }
               } else if (currentWave == 10) {
                 if (enemiesSpawnedSinceStartOfWave == 0) {
                   enemies.push_back(
                       std::make_shared<AdasGooner>(spawnPos, ++enemyIdCounter));
-                  if (!goonMusicPlaying) {
-                    PlayMusicStream(goonMusic);
-                    goonMusicPlaying = true;
-                  }
                 }
               } else {
                 int roll = GetRandomValue(0, 100);
@@ -685,28 +694,13 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                 state = GameState::MENU;
                 net.gameStarted = false;
                 currentWave = 1;
-                if (goonMusicPlaying) {
-                  StopMusicStream(goonMusic);
-                  goonMusicPlaying = false;
-                }
               } else {
                 waveActive = false;
                 waveWaitTimer = 5.0f;
-                if (gibonMusicPlaying) {
-                  StopMusicStream(gibonMusic);
-                  gibonMusicPlaying = false;
-                }
-                if (goonMusicPlaying) {
-                  StopMusicStream(goonMusic);
-                  goonMusicPlaying = false;
-                }
               }
             }
 
-            if (goonMusicPlaying)
-              UpdateMusicStream(goonMusic);
-            if (gibonMusicPlaying)
-              UpdateMusicStream(gibonMusic);
+
           }
 
           if (!waveActive) {

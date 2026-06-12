@@ -408,7 +408,6 @@ void Game::HandleShooting() {
                           if (enemiesSpawnedSinceStartOfWave == 0) {
                               Vector3 primeSpawn = { 0.0f, 0.1f, -400.0f };
                               enemies.push_back(std::make_shared<AdasPrime>(primeSpawn, ++enemyIdCounter));
-                              if (!goonMusicPlaying) { PlayMusicStream(goonMusic); goonMusicPlaying = true; }
                           } else {
                               // Spawn guards for the prime
                               EnemyType gt = (GetRandomValue(0, 1) == 0 ? EnemyType::TANK : EnemyType::ELITE);
@@ -429,7 +428,6 @@ void Game::HandleShooting() {
                       } else if (currentWave == 10) {
                           if (enemiesSpawnedSinceStartOfWave == 0) {
                               enemies.push_back(std::make_shared<AdasGooner>(spawnPos, ++enemyIdCounter));
-                              if (!goonMusicPlaying) { PlayMusicStream(goonMusic); goonMusicPlaying = true; }
                           }
                       } else {
                            int roll = GetRandomValue(0, 100);
@@ -456,13 +454,12 @@ void Game::HandleShooting() {
                           state = GameState::MENU;
                           net.gameStarted = false;
                           currentWave = 1;
-                          if (goonMusicPlaying) { StopMusicStream(goonMusic); goonMusicPlaying = false; }
                       } else {
                           waveActive = false; waveWaitTimer = 5.0f;
                       }
                   }
                   
-                  if (goonMusicPlaying) UpdateMusicStream(goonMusic);
+
               }
 
               if (!waveActive) {

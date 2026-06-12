@@ -89,8 +89,10 @@ private:
 
     Music goonMusic;
     Music gibonMusic;
+    Music primeMusic;
     bool goonMusicPlaying;
     bool gibonMusicPlaying;
+    bool primeMusicPlaying;
 
     int enemyIdCounter;
     std::map<int, float> remoteFireCooldowns;
