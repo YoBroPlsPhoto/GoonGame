@@ -282,14 +282,21 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
 
             bool isTurret =
                 (strncmp(localPlayer.currentWeapon->name, "TURRET", 6) == 0);
+            int tier = 1;
+            if (isTurret) {
+                sscanf(localPlayer.currentWeapon->name, "TURRET TIER %d", &tier);
+            } else {
+                sscanf(localPlayer.currentWeapon->name, "WALL TIER %d", &tier);
+            }
             auto s = std::make_shared<Structure>();
             s->position = placePos;
             s->type = isTurret ? StructureType::TURRET : StructureType::WALL;
-            s->maxHp = isTurret ? 1200 : 4000;
+            s->tier = tier;
+            s->maxHp = (isTurret ? 1200 : 4000) * tier;
             s->hp = s->maxHp;
             s->lastHp = s->hp;
             s->color =
-                isTurret ? (Color){140, 30, 30, 255} : (Color){80, 65, 45, 255};
+                isTurret ? (Color){(unsigned char)std::min(255, 140 + tier*20), 30, 30, 255} : (Color){(unsigned char)std::min(255, 80 + tier*10), (unsigned char)std::min(255, 65 + tier*10), (unsigned char)std::min(255, 45 + tier*10), 255};
             s->ownerId = localPlayer.playerId;
             structures.push_back(s);
 
@@ -784,8 +791,8 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                 // Fire at target
                 s->attackTimer -= dt;
                 if (s->attackTimer <= 0 && target) {
-                  s->attackTimer = 0.3f; // ~3.3 shots per sec
-                  int dmg = 50;
+                  s->attackTimer = std::max(0.1f, 0.35f - 0.05f * s->tier); // faster fire rate with tier
+                  int dmg = 30 + 20 * s->tier; // more dmg with tier
                   float oldHp = target->hp;
                   target->TakeDamage(dmg);
 

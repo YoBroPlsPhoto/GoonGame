@@ -3,8 +3,10 @@
 #include "rlgl.h"
 #include <cmath>
 
+int Glock::globalGlockDamage = 35;
+
 Glock::Glock() {
-    damage = 35;
+    damage = globalGlockDamage;
     attackCooldown = 0.3f;
     currentCooldown = 0.0f;
     recoilTimer = 0.0f;
@@ -13,6 +15,7 @@ Glock::Glock() {
 }
 
 void Glock::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {
+    damage = globalGlockDamage;
     if (currentCooldown > 0) currentCooldown -= dt;
     if (recoilTimer > 0) recoilTimer -= dt;
 

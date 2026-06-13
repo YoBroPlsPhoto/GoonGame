@@ -56,7 +56,10 @@ AdasGooner::AdasGooner(Vector3 startPos, int enemyId)
 
 void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector3 basePos) {
     if (!active) return;
-    if (hp <= 0) { active = false; return; }
+    if (hp <= 0 && cutsceneState != CutsceneState::RETREATING && cutsceneState != CutsceneState::WARDROBE_RETREAT_OPENING && cutsceneState != CutsceneState::WARDROBE_CLOSING && cutsceneState != CutsceneState::RETREATED) { 
+        cutsceneState = CutsceneState::RETREATING; 
+        cutsceneTimer = 0.0f;
+    }
 
     cutsceneTimer += GetFrameTime();
 
@@ -77,6 +80,40 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
         float timeScale = dt * 60.0f;
         position.z += speed * 2.0f * timeScale; isMoving = true; walkTimer += dt;
         if (cutsceneTimer > 6.0f) cutsceneState = CutsceneState::FINISHED;
+    } else if (cutsceneState == CutsceneState::RETREATING) {
+        float dt = GetFrameTime();
+        float timeScale = dt * 60.0f;
+        
+        Vector3 dir = Vector3Subtract(wardrobePos, position);
+        float dist = Vector3Length(dir);
+        if (dist > 1.0f) {
+            dir = Vector3Normalize(dir);
+            position.x += dir.x * speed * 2.0f * timeScale;
+            position.z += dir.z * speed * 2.0f * timeScale;
+            angle = atan2f(dir.x, dir.z) * RAD2DEG;
+            isMoving = true;
+            walkTimer += dt;
+        } else {
+            // Reached wardrobe
+            position = wardrobePos;
+            angle = 0;
+            cutsceneState = CutsceneState::WARDROBE_RETREAT_OPENING;
+            cutsceneTimer = 0.0f;
+        }
+    } else if (cutsceneState == CutsceneState::WARDROBE_RETREAT_OPENING) {
+        // Portal opens
+        isMoving = false; walkTimer = 0; angle = 0;
+        if (cutsceneTimer > 3.0f) {
+            cutsceneState = CutsceneState::WARDROBE_CLOSING;
+            cutsceneTimer = 0.0f;
+        }
+    } else if (cutsceneState == CutsceneState::WARDROBE_CLOSING) {
+        // Doors close
+        isMoving = false; walkTimer = 0;
+        if (cutsceneTimer > 2.0f) {
+            cutsceneState = CutsceneState::RETREATED;
+            active = false;
+        }
     } else {
         // Normal Behavior
         Enemy::Update(players, baseHp, basePos);
@@ -107,51 +144,50 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
 void AdasGooner::Draw() {
     if (!active) return;
 
-    if (cutsceneState != CutsceneState::FINISHED) {
-        // --- DRAW WARDROBE ---
+    // --- DRAW WARDROBE --- always visible (including during retreat)
+    {
         rlPushMatrix();
         rlTranslatef(wardrobePos.x, wardrobePos.y, wardrobePos.z);
-        // Turn around so doors face forward
         rlRotatef(180, 0, 1, 0);
         
         // Structure
-        DrawCube((Vector3){0, 9.0f, 3.0f}, 12.0f, 18.0f, 1.0f, DARKBROWN); // Back
-        DrawCube((Vector3){-6.0f, 9.0f, 0}, 1.0f, 18.0f, 6.0f, DARKBROWN); // Left
-        DrawCube((Vector3){6.0f, 9.0f, 0}, 1.0f, 18.0f, 6.0f, DARKBROWN);  // Right
-        DrawCube((Vector3){0, 18.5f, 0}, 13.0f, 1.0f, 6.0f, BLACK);       // Top roof
-        DrawCube((Vector3){0, 0.5f, 0}, 13.0f, 1.0f, 6.0f, BLACK);        // Base
+        DrawCube((Vector3){0, 9.0f, 3.0f}, 12.0f, 18.0f, 1.0f, DARKBROWN);
+        DrawCube((Vector3){-6.0f, 9.0f, 0}, 1.0f, 18.0f, 6.0f, DARKBROWN);
+        DrawCube((Vector3){6.0f, 9.0f, 0}, 1.0f, 18.0f, 6.0f, DARKBROWN);
+        DrawCube((Vector3){0, 18.5f, 0}, 13.0f, 1.0f, 6.0f, BLACK);
+        DrawCube((Vector3){0, 0.5f, 0}, 13.0f, 1.0f, 6.0f, BLACK);
         
-        // Doors
+        // Door angle
         float doorAngle = 0;
         if (cutsceneState == CutsceneState::WARDROBE_OPENING) {
-            doorAngle = (cutsceneTimer / 5.0f) * 110.0f; // Opens gradually
-        } else if (cutsceneState == CutsceneState::WALKING_OUT || cutsceneState == CutsceneState::FINISHED) {
-            doorAngle = 110.0f;
+            doorAngle = (cutsceneTimer / 5.0f) * 110.0f;
+        } else if (cutsceneState == CutsceneState::WALKING_OUT ||
+                   cutsceneState == CutsceneState::FINISHED ||
+                   cutsceneState == CutsceneState::RETREATING ||
+                   cutsceneState == CutsceneState::WARDROBE_RETREAT_OPENING) {
+            doorAngle = 110.0f; // stay open
+        } else if (cutsceneState == CutsceneState::WARDROBE_CLOSING) {
+            doorAngle = (1.0f - (cutsceneTimer / 2.0f)) * 110.0f;
+            if (doorAngle < 0) doorAngle = 0;
         }
 
-        // White stain spreads around the wardrobe as it opens.
+        // White stain during opening/closing
         if (cutsceneState == CutsceneState::WARDROBE_OPENING ||
-            cutsceneState == CutsceneState::WALKING_OUT) {
+            cutsceneState == CutsceneState::WALKING_OUT ||
+            cutsceneState == CutsceneState::WARDROBE_RETREAT_OPENING ||
+            (cutsceneState == CutsceneState::WARDROBE_CLOSING && doorAngle > 5.0f)) {
             float openProgress = doorAngle / 110.0f;
             float pulse = sinf((float)GetTime() * 8.0f) * 0.08f + 0.92f;
             float mainRadius = (8.0f + openProgress * 18.0f) * pulse;
-
-            DrawCylinder((Vector3){0.0f, 0.08f, 0.0f}, mainRadius,
-                         mainRadius, 0.08f, 64, WHITE);
-            DrawCylinder((Vector3){-6.0f, 0.10f, -1.0f}, mainRadius * 0.55f,
-                         mainRadius * 0.55f, 0.08f, 64, WHITE);
-            DrawCylinder((Vector3){6.0f, 0.12f, -1.0f}, mainRadius * 0.55f,
-                         mainRadius * 0.55f, 0.08f, 64, WHITE);
-            DrawCylinder((Vector3){0.0f, 0.14f, -7.0f}, mainRadius * 0.65f,
-                         mainRadius * 0.65f, 0.08f, 64, WHITE);
-            DrawCylinder((Vector3){0.0f, 0.16f, 5.0f}, mainRadius * 0.45f,
-                         mainRadius * 0.45f, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){0.0f, 0.08f, 0.0f}, mainRadius, mainRadius, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){-6.0f, 0.10f, -1.0f}, mainRadius * 0.55f, mainRadius * 0.55f, 0.08f, 64, WHITE);
+            DrawCylinder((Vector3){6.0f, 0.12f, -1.0f}, mainRadius * 0.55f, mainRadius * 0.55f, 0.08f, 64, WHITE);
         }
 
         // Left door
         rlPushMatrix();
         rlTranslatef(-5.5f, 9.0f, -3.0f);
-        rlRotatef(doorAngle, 0, 1, 0); // Open outwards
+        rlRotatef(doorAngle, 0, 1, 0);
         DrawCube((Vector3){2.75f, 0, 0}, 5.5f, 17.0f, 0.5f, BROWN);
         rlPopMatrix();
 
@@ -165,13 +201,22 @@ void AdasGooner::Draw() {
         rlPopMatrix();
     }
 
-    // Only draw him if doors are opening or he's walked out
+    // Don't draw the character if still in wardrobe or fully retreated
     if (cutsceneState == CutsceneState::WARDROBE_CLOSED) return;
+    if (cutsceneState == CutsceneState::WARDROBE_CLOSING) return;
+    if (cutsceneState == CutsceneState::RETREATED) return;
 
     if (globalUseWafelModel && wafelModelLoaded) {
+        float animWalk = isMoving ? sinf(walkTimer * speed * 30.0f) : 0.0f;
         rlPushMatrix();
-        rlTranslatef(position.x, position.y, position.z);
+        // Bobbing up and down
+        rlTranslatef(position.x, position.y + fabsf(animWalk) * 2.0f, position.z);
         rlRotatef(angle, 0, 1, 0);
+        // Wobble left and right
+        rlRotatef(animWalk * 15.0f, 0, 0, 1);
+        // Tilt forward slightly while walking
+        if (isMoving) rlRotatef(15.0f, 1, 0, 0);
+        
         // Scale and rotation for wafel model
         rlScalef(0.75f, 0.75f, 0.75f); 
         DrawModel(wafelModel, (Vector3){0, 0, 0}, 1.0f, WHITE);

@@ -44,23 +44,23 @@ void Structure::Draw() {
         // Steel reinforcement plates on front and back
         Color steelCol = {90, 95, 100, 255};
         if (damageFlash > 0) steelCol = baseColor;
-        DrawCube({p.x, p.y + 2.0f, p.z + 1.3f}, 7.5f, 3.5f, 0.15f, steelCol);
-        DrawCube({p.x, p.y + 2.0f, p.z - 1.3f}, 7.5f, 3.5f, 0.15f, steelCol);
+        DrawCube({p.x, p.y + 2.0f, p.z + 1.35f}, 7.5f, 3.5f, 0.25f, steelCol);
+        DrawCube({p.x, p.y + 2.0f, p.z - 1.35f}, 7.5f, 3.5f, 0.25f, steelCol);
         
         // Top edge (concrete lip)
         Color topCol = {(unsigned char)(baseColor.r * 0.8f), (unsigned char)(baseColor.g * 0.8f), (unsigned char)(baseColor.b * 0.8f), 255};
-        DrawCube({p.x, p.y + 4.1f, p.z}, 8.4f, 0.3f, 2.9f, topCol);
+        DrawCube({p.x, p.y + 4.1f, p.z}, 8.4f, 0.3f, 2.92f, topCol);
         
         // Vertical support pillars on edges
         Color pillarCol = {60, 60, 65, 255};
-        DrawCube({p.x - 3.7f, p.y + 2.0f, p.z}, 0.6f, 4.0f, 2.7f, pillarCol);
-        DrawCube({p.x + 3.7f, p.y + 2.0f, p.z}, 0.6f, 4.0f, 2.7f, pillarCol);
+        DrawCube({p.x - 3.71f, p.y + 2.0f, p.z}, 0.62f, 4.02f, 2.62f, pillarCol);
+        DrawCube({p.x + 3.71f, p.y + 2.0f, p.z}, 0.62f, 4.02f, 2.62f, pillarCol);
         
         // Center cross brace
-        DrawCube({p.x, p.y + 2.0f, p.z}, 0.4f, 4.0f, 2.7f, pillarCol);
+        DrawCube({p.x, p.y + 2.0f, p.z}, 0.42f, 4.02f, 2.62f, pillarCol);
         
         // Bottom foundation
-        DrawCube({p.x, p.y + 0.15f, p.z}, 8.6f, 0.3f, 3.0f, {50, 50, 55, 255});
+        DrawCube({p.x, p.y + 0.15f, p.z}, 8.6f, 0.3f, 3.02f, {50, 50, 55, 255});
         
         // Damage cracks (visible when < 60% HP)
         if (hpRatio < 0.6f) {
@@ -75,6 +75,17 @@ void Structure::Draw() {
         
         // Wire outline
         DrawCubeWires({p.x, p.y + 2.0f, p.z}, 8.0f, 4.0f, 2.5f, Fade(BLACK, 0.3f));
+        
+        // Tier 2: Spikes on top
+        if (tier >= 2) {
+            for (int i = -3; i <= 3; i++) {
+                DrawCylinder({p.x + i * 1.0f, p.y + 4.25f, p.z}, 0.2f, 0.0f, 0.6f, 8, DARKGRAY);
+            }
+        }
+        // Tier 3: Metal plating on the front
+        if (tier >= 3) {
+            DrawCube({p.x, p.y + 2.0f, p.z + 1.4f}, 7.0f, 3.0f, 0.1f, {60, 60, 60, 255});
+        }
         
     } else { // === TURRET ===
         Vector3 p = position;
@@ -109,12 +120,27 @@ void Structure::Draw() {
         // Barrel recoil offset
         float recoilOffset = barrelRecoil * 0.4f;
         
-        // Dual barrels
         Color barrelCol = {45, 45, 50, 255};
+        
+        // Tier 2 adds extra armor shielding
+        if (tier >= 2) {
+            DrawCube({0, 0.9f, 1.4f}, 2.4f, 0.6f, 0.2f, {70, 75, 80, 255});
+            DrawCube({-1.1f, 0.5f, 1.4f}, 0.2f, 1.4f, 0.2f, {70, 75, 80, 255});
+            DrawCube({1.1f, 0.5f, 1.4f}, 0.2f, 1.4f, 0.2f, {70, 75, 80, 255});
+        }
+
+        // Dual barrels
         DrawCube({-0.35f, 0.5f, 1.5f + 1.5f - recoilOffset}, 0.25f, 0.25f, 3.0f, barrelCol);
         DrawCube({0.35f, 0.5f, 1.5f + 1.5f - recoilOffset}, 0.25f, 0.25f, 3.0f, barrelCol);
         DrawCubeWires({-0.35f, 0.5f, 1.5f + 1.5f - recoilOffset}, 0.25f, 0.25f, 3.0f, Fade(BLACK, 0.3f));
         DrawCubeWires({0.35f, 0.5f, 1.5f + 1.5f - recoilOffset}, 0.25f, 0.25f, 3.0f, Fade(BLACK, 0.3f));
+        
+        // Tier 3 adds a third central barrel
+        if (tier >= 3) {
+            DrawCube({0.0f, 0.8f, 1.5f + 1.5f - recoilOffset}, 0.25f, 0.25f, 3.0f, barrelCol);
+            DrawCubeWires({0.0f, 0.8f, 1.5f + 1.5f - recoilOffset}, 0.25f, 0.25f, 3.0f, Fade(BLACK, 0.3f));
+            DrawCube({0.0f, 0.8f, 3.2f - recoilOffset}, 0.35f, 0.35f, 0.15f, {35, 35, 40, 255});
+        }
         
         // Barrel tips (flash guard)
         DrawCube({-0.35f, 0.5f, 3.2f - recoilOffset}, 0.35f, 0.35f, 0.15f, {35, 35, 40, 255});

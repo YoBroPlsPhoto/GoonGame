@@ -45,6 +45,7 @@ public:
     bool showInventory = false;
     bool isAdmin = false;
     bool showSettings = false;
+    bool showAdminSettings = false;
 
     Player(Vector3 startPos, int id);
     ~Player();

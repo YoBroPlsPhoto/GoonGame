@@ -136,7 +136,7 @@ void Game::Render3D() {
           for (auto &e : enemies) {
             if (e->type == EnemyType::GANG_BOSS) {
               auto gang = std::dynamic_pointer_cast<GangBoss>(e);
-              if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+              if (gang && gang->cutsceneState < GangCutscene::FIGHT) {
                 isGangCutscene = true;
                 bossPos = gang->wardrobePos;
               }

@@ -1,7 +1,7 @@
 #pragma once
 #include "../enemies/enemy.hpp"
 
-enum class CutsceneState { WARDROBE_CLOSED, WARDROBE_OPENING, WALKING_OUT, FINISHED };
+enum class CutsceneState { WARDROBE_CLOSED, WARDROBE_OPENING, WALKING_OUT, FINISHED, RETREATING, WARDROBE_RETREAT_OPENING, WARDROBE_CLOSING, RETREATED };
 
 class AdasGooner : public Enemy {
 public:

@@ -1,14 +1,14 @@
 #include "core/game.hpp"
 
 void Game::UpdateCore() {
-                    if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+                    if (gang && gang->cutsceneState < GangCutscene::FIGHT) {
                         inCutscene = true; bossPos = gang->wardrobePos; activeBoss = gang; break;
                     }
                 }
             }
         } else {
             for (auto const& [id, e] : net.syncedEnemies) {
-                if (e.type == (int)EnemyType::BOSS && e.attackTimer != (float)(int)CutsceneState::FINISHED) {
+                if (e.type == (int)EnemyType::BOSS && e.attackTimer < (float)(int)CutsceneState::FINISHED) {
                     inCutscene = true; bossPos = e.pos; break;
                 }
                 if (e.type == (int)EnemyType::GIBON_BOSS && e.attackTimer != (float)(int)GibonState::FINISHED_FALLING) {
@@ -754,7 +754,7 @@ void Game::UpdateNetworkAndEnemies() {
               for (auto& e : enemies) {
                   if (e->type == EnemyType::GANG_BOSS) {
                       auto gang = std::dynamic_pointer_cast<GangBoss>(e);
-                      if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+                      if (gang && gang->cutsceneState < GangCutscene::FIGHT) {
                           isGangCutscene = true;
                           bossPos = gang->wardrobePos;
                       }

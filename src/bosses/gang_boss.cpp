@@ -91,7 +91,10 @@ void GangBoss::Update(const std::vector<TargetInfo>& players, float* baseHp, Vec
     
     // Update aggregate HP
     hp = GetTotalHP();
-    if (!AnyAlive()) { active = false; return; }
+    if (!AnyAlive() && cutsceneState < GangCutscene::POST_FIGHT) {
+        cutsceneState = GangCutscene::POST_FIGHT;
+        stateTimer = 0.0f;
+    }
     
     if (cutsceneState == GangCutscene::WARDROBE_FALLING) {
         // Wardrobe falls from sky
@@ -314,19 +317,86 @@ void GangBoss::Update(const std::vector<TargetInfo>& players, float* baseHp, Vec
             position.x = center.x / (float)aliveCount;
             position.z = center.z / (float)aliveCount;
         }
+    } else if (cutsceneState == GangCutscene::POST_FIGHT) {
+        doorAngle = 110.0f;
+        if (stateTimer > 2.0f) {
+            cutsceneState = GangCutscene::RETREATING;
+            stateTimer = 0.0f;
+        }
+    } else if (cutsceneState == GangCutscene::RETREATING) {
+        doorAngle = 110.0f;
+        float timeScale = dt * 60.0f;
+        bool allIn = true;
+        
+        for (int i = 0; i < 5; i++) {
+            GangMember& m = members[i];
+            // resurrect for the retreat
+            m.alive = true;
+            
+            Vector3 targetPos = wardrobePos;
+            Vector3 dir = Vector3Subtract(targetPos, m.position);
+            dir.y = 0;
+            float dist = Vector3Length(dir);
+            
+            if (dist > 2.0f) {
+                allIn = false;
+                Vector3 moveDir = Vector3Normalize(dir);
+                m.angle = atan2f(moveDir.x, moveDir.z) * RAD2DEG;
+                m.position.x += moveDir.x * speed * timeScale;
+                m.position.z += moveDir.z * speed * timeScale;
+                m.isMoving = true;
+                m.walkTimer += dt;
+            } else {
+                m.isMoving = false;
+                m.position.x = wardrobePos.x;
+                m.position.z = wardrobePos.z;
+                m.angle = 0;
+            }
+        }
+        if (allIn) {
+            cutsceneState = GangCutscene::WARDROBE_RETREAT_OPENING;
+            stateTimer = 0.0f;
+        }
+    } else if (cutsceneState == GangCutscene::WARDROBE_RETREAT_OPENING) {
+        doorAngle = 110.0f;
+        for (int i = 0; i < 5; i++) { members[i].isMoving = false; members[i].angle = 0; }
+        if (stateTimer > 3.0f) {
+            cutsceneState = GangCutscene::WARDROBE_CLOSING;
+            stateTimer = 0.0f;
+        }
+    } else if (cutsceneState == GangCutscene::WARDROBE_CLOSING) {
+        doorAngle = (1.0f - (stateTimer / 2.0f)) * 110.0f;
+        if (doorAngle < 0) doorAngle = 0;
+        
+        for (int i = 0; i < 5; i++) { members[i].isMoving = false; }
+        
+        if (stateTimer > 2.0f) {
+            cutsceneState = GangCutscene::RETREATED;
+            for (int i = 0; i < 5; i++) { members[i].position.y = 9000.0f; } // teleport away
+            active = false;
+        }
     }
 }
 
 // Helper: Draw one gang member model
 static void DrawGangMember(const GangMember& m, float pulseTime) {
-    if (!m.alive) return;
+    if (!m.alive && m.position.y > 1000.0f) return;
     
     float scale = 4.0f; // Big thugs
     float animWalk = m.isMoving ? sinf(m.walkTimer * 8.0f) : 0.0f;
     
     rlPushMatrix();
     rlTranslatef(m.position.x, m.position.y, m.position.z);
-    rlRotatef(m.angle, 0, 1, 0);
+    
+    if (!m.alive) {
+        // Lay down backward
+        rlRotatef(m.angle, 0, 1, 0);
+        rlRotatef(-90.0f, 1, 0, 0);
+        rlTranslatef(0, -1.0f, -0.5f);
+    } else {
+        rlRotatef(m.angle, 0, 1, 0);
+    }
+    
     rlScalef(scale, scale, scale);
     
     Color skin = {60, 40, 30, 255};
@@ -423,7 +493,7 @@ void GangBoss::Draw() {
         DrawCube({0, 0.5f, 0}, 15.0f, 1.0f, 7.0f, {20, 5, 30, 255});      // Base
         
         // Portal glow inside (always active after landing)
-        if (cutsceneState != GangCutscene::WARDROBE_FALLING) {
+        if (cutsceneState != GangCutscene::WARDROBE_FALLING && (cutsceneState != GangCutscene::WARDROBE_CLOSING || doorAngle > 5.0f) && cutsceneState != GangCutscene::RETREATED) {
             float glow = 0.5f + sinf(portalPulse * 3.0f) * 0.3f;
             DrawCube({0, 10.0f, 2.5f}, 10.0f, 16.0f, 0.5f, Fade({150, 50, 200, 255}, glow));
             // Swirl effect
@@ -474,8 +544,10 @@ void GangBoss::Draw() {
     
     // --- DRAW GANG MEMBERS ---
     for (int i = 0; i < 5; i++) {
-        if (i < membersOut || cutsceneState == GangCutscene::FIGHT) {
-            DrawGangMember(members[i], portalPulse);
+        if (i < membersOut || cutsceneState == GangCutscene::FIGHT || cutsceneState == GangCutscene::POST_FIGHT || cutsceneState == GangCutscene::RETREATING || cutsceneState == GangCutscene::WARDROBE_RETREAT_OPENING || cutsceneState == GangCutscene::WARDROBE_CLOSING) {
+            if (members[i].position.y < 5000.0f) {
+                DrawGangMember(members[i], portalPulse);
+            }
         }
     }
     

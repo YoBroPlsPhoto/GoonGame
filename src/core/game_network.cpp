@@ -495,7 +495,7 @@ void Game::UpdateAdasHazards() {
   }
 
   if (adas->hp < adas->maxHp / 2 &&
-      adas->cutsceneState == CutsceneState::FINISHED) {
+      adas->cutsceneState >= CutsceneState::FINISHED) {
     adasDropTimer -= dt;
     if (adasDropTimer <= 0.0f) {
       adasDropTimer = 1.4f;

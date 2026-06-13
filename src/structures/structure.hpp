@@ -12,6 +12,7 @@ struct Structure {
     int hp;
     int maxHp;
     StructureType type;
+    int tier = 1;
     float attackTimer = 0;
     bool active = true;
     Color color;

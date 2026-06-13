@@ -59,7 +59,7 @@ Enemy::Enemy(Vector3 startPos, EnemyType t, WeaponType w, int enemyId) {
 
 void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector3 basePos) {
     if (!active) return;
-    if (hp <= 0) { active = false; return; }
+    if (hp <= 0 && type != EnemyType::BOSS && type != EnemyType::GANG_BOSS && type != EnemyType::ADAS_PRIME && type != EnemyType::GIBON_BOSS) { active = false; return; }
 
     if (tankCrushCooldown > 0) {
         tankCrushCooldown -= GetFrameTime();

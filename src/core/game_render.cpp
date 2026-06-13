@@ -1,4 +1,5 @@
 #include "core/game.hpp"
+#include "../weapons/glock.hpp"
 
 static const char *GetBossDetectedName(EnemyType type) {
   switch (type) {
@@ -174,7 +175,7 @@ void Game::Render() {
           for (auto &e : enemies) {
             if (e->type == EnemyType::GANG_BOSS) {
               auto gang = std::dynamic_pointer_cast<GangBoss>(e);
-              if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+              if (gang && gang->cutsceneState < GangCutscene::FIGHT) {
                 isGangCutscene = true;
                 bossPos = gang->wardrobePos;
               }
@@ -1157,11 +1158,16 @@ void Game::Render() {
         int sh = GetScreenHeight();
         DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.6f));
 
-        Rectangle menuBox = {(float)sw / 2 - 200, (float)sh / 2 - 250, 400,
-                             500};
+        bool inSubMenu = localPlayer.showSettings || localPlayer.showAdminSettings;
+        int boxHeight = inSubMenu ? 560 : 500;
+        Rectangle menuBox = {(float)sw / 2 - 200, (float)sh / 2 - (float)boxHeight / 2, 400, (float)boxHeight};
         DrawRectangleRounded(menuBox, 0.1f, 8, Fade(DARKGRAY, 0.9f));
-        DrawRectangleLinesEx(menuBox, 2, GOLD);
-        DrawText("CONTROL TERMINAL", menuBox.x + 80, menuBox.y + 30, 25, GOLD);
+        DrawRectangleLinesEx(menuBox, 2, localPlayer.showAdminSettings ? Fade(ORANGE, 0.9f) : GOLD);
+        const char* termTitle = localPlayer.showAdminSettings ? "ADMIN TERMINAL" : "CONTROL TERMINAL";
+        DrawText(termTitle,
+                 (int)(menuBox.x + 200 - MeasureText(termTitle, 25) / 2),
+                 (int)(menuBox.y + 30), 25,
+                 localPlayer.showAdminSettings ? ORANGE : GOLD);
 
         float menuY = menuBox.y + 100;
         auto menuBtn = [&](const char *text, Color col) {
@@ -1179,6 +1185,7 @@ void Game::Render() {
           state = GameState::GAME;
 
         if (localPlayer.showSettings) {
+          // --- OPTIONS SUB-PANEL ---
           DrawText("SETTINGS", menuBox.x + 50, menuY - 40, 20, SKYBLUE);
           DrawText(TextFormat("FOV: %d", (int)preferredFOV), menuBox.x + 50,
                    menuY, 18, RAYWHITE);
@@ -1190,24 +1197,71 @@ void Game::Render() {
           if (CheckCollisionPointRec(GetMousePosition(), fovBar) &&
               IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
             preferredFOV = 40.0f + ((GetMouseX() - fovBar.x) / 300.0f) * 80.0f;
-            if (preferredFOV < 40)
-              preferredFOV = 40;
-            if (preferredFOV > 120)
-              preferredFOV = 120;
+            if (preferredFOV < 40) preferredFOV = 40;
+            if (preferredFOV > 120) preferredFOV = 120;
           }
           menuY += 60;
           if (menuBtn("BACK", DARKGRAY))
             localPlayer.showSettings = false;
+
+        } else if (localPlayer.showAdminSettings) {
+          // --- ADMIN SETTINGS SUB-PANEL ---
+
+          // Fly toggle
+          Color flyCol = localPlayer.isFlying ? (Color){0, 200, 80, 255} : MAROON;
+          if (menuBtn(localPlayer.isFlying ? "FLY MODE: ON" : "FLY MODE: OFF", flyCol)) {
+            localPlayer.isAdmin = true;
+            localPlayer.isFlying = !localPlayer.isFlying;
+          }
+
+          // Glock damage label + value
+          DrawText("GLOCK DAMAGE:", menuBox.x + 50, menuY - 5, 18, RAYWHITE);
+          DrawText(TextFormat("%d", Glock::globalGlockDamage), menuBox.x + 270, menuY - 5, 22, ORANGE);
+          menuY += 28;
+
+          // Slider bar
+          Rectangle dmgBar = {menuBox.x + 50, menuY, 300, 18};
+          DrawRectangleRounded(dmgBar, 0.5f, 8, Fade(BLACK, 0.7f));
+          float dmgT = (float)(Glock::globalGlockDamage - 1) / (9999.0f - 1.0f);
+          DrawRectangleRounded({dmgBar.x, dmgBar.y, dmgBar.width * dmgT, dmgBar.height}, 0.5f, 8, ORANGE);
+          DrawRectangleLinesEx(dmgBar, 1, Fade(ORANGE, 0.4f));
+          if (CheckCollisionPointRec(GetMousePosition(), dmgBar) &&
+              IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+            float t = (GetMouseX() - dmgBar.x) / dmgBar.width;
+            if (t < 0) t = 0; if (t > 1) t = 1;
+            Glock::globalGlockDamage = 1 + (int)(t * 9998.0f);
+          }
+          menuY += 38;
+
+          // Preset buttons
+          const int presets[] = {35, 100, 500, 9999};
+          const char* presetLabels[] = {"35 (DEF)", "100", "500", "9999"};
+          const int presetCount = 4;
+          float btnW = 65.0f;
+          float startX2 = menuBox.x + 50;
+          for (int p = 0; p < presetCount; p++) {
+            Rectangle pr = {startX2 + p * (btnW + 8.0f), menuY, btnW, 36};
+            bool hov2 = CheckCollisionPointRec(GetMousePosition(), pr);
+            bool active = (Glock::globalGlockDamage == presets[p]);
+            DrawRectangleRounded(pr, 0.3f, 8, active ? Fade(ORANGE, 0.9f) : (hov2 ? Fade(GRAY, 0.8f) : Fade(BLACK, 0.5f)));
+            DrawText(presetLabels[p], (int)(pr.x + pr.width/2 - MeasureText(presetLabels[p], 13)/2), (int)(pr.y + 11), 13, WHITE);
+            if (hov2 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+              Glock::globalGlockDamage = presets[p];
+          }
+          menuY += 52;
+
+          if (menuBtn("BACK", DARKGRAY))
+            localPlayer.showAdminSettings = false;
+
         } else {
+          // --- MAIN PAUSE MENU ---
           if (menuBtn("OPTIONS", DARKBLUE))
             localPlayer.showSettings = true;
 
           bool isAdmin = (net.mode == NetworkManager::Mode::SERVER);
           if (isAdmin) {
-            if (menuBtn("ADMIN SETTINGS", MAROON)) {
-              localPlayer.isAdmin = true;
-              localPlayer.isFlying = !localPlayer.isFlying;
-            }
+            if (menuBtn("ADMIN SETTINGS", MAROON))
+              localPlayer.showAdminSettings = true;
           }
 
           if (menuBtn("DISCONNECT", RED)) {

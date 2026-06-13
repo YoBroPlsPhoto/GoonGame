@@ -40,7 +40,7 @@ void Game::ApplySettings() {
         for (auto &e : enemies) {
           if (e->type == EnemyType::BOSS) {
             auto boss = std::dynamic_pointer_cast<AdasGooner>(e);
-            if (boss && boss->cutsceneState != CutsceneState::FINISHED) {
+            if (boss && boss->cutsceneState < CutsceneState::FINISHED) {
               inCutscene = true;
               bossPos = boss->wardrobePos;
               activeBoss = boss;
@@ -58,7 +58,7 @@ void Game::ApplySettings() {
           }
           if (e->type == EnemyType::GANG_BOSS) {
             auto gang = std::dynamic_pointer_cast<GangBoss>(e);
-            if (gang && gang->cutsceneState != GangCutscene::FIGHT) {
+            if (gang && gang->cutsceneState < GangCutscene::FIGHT) {
               inCutscene = true;
               bossPos = gang->wardrobePos;
               activeBoss = gang;
@@ -69,7 +69,7 @@ void Game::ApplySettings() {
       } else {
         for (auto const &[id, e] : net.syncedEnemies) {
           if (e.type == (int)EnemyType::BOSS &&
-              e.attackTimer != (float)(int)CutsceneState::FINISHED) {
+              e.attackTimer < (float)(int)CutsceneState::FINISHED) {
             inCutscene = true;
             bossPos = e.pos;
             break;
