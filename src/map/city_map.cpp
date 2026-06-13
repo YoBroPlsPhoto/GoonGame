@@ -1,16 +1,16 @@
 #include "city_map.hpp"
-#include <cmath>
-#include "rlgl.h"
 #include "raymath.h"
+#include "rlgl.h"
+#include <cmath>
 #include <cstdio>
 
 CityMap::CityMap() {
   type = MapType::CITY;
-  
+
   // Load models once
   trashBinModel = LoadModel("../models/bin.obj");
   modelLoaded = true;
-  
+
   // Try loading buildings from editor data file first
   if (!LoadBuildingsFromFile("../maps/city_buildings.dat")) {
     // No saved data — generate city randomly (default)
@@ -29,7 +29,7 @@ CityMap::CityMap() {
       }
     }
   }
-  
+
   // Build collision obstacles from buildings
   RebuildObstaclesFromBuildings();
 
@@ -122,7 +122,7 @@ CityMap::CityMap() {
   // --- KEBAB STAND OBSTACLES (Ground Floor) ---
   // Stand box at (15, 0, bp.z + 10) width: 8 depth: 4 height: 2.5
   obstacles.push_back({{bp.x + 11, 0, bp.z + 8}, {bp.x + 19, 2.5f, bp.z + 12}});
-  
+
   // Tank Terminal box at (15, 0, 120)
   obstacles.push_back({{14.0f, 0, 119.0f}, {16.0f, 3, 121.0f}});
 
@@ -146,7 +146,8 @@ CityMap::CityMap() {
 }
 
 CityMap::~CityMap() {
-    if (modelLoaded) UnloadModel(trashBinModel);
+  if (modelLoaded)
+    UnloadModel(trashBinModel);
 }
 
 void CityMap::Draw(int detailLevel, Vector3 viewPos, int currentWave) {
@@ -178,14 +179,21 @@ void CityMap::Draw(int detailLevel, Vector3 viewPos, int currentWave) {
         DrawSphere((Vector3){24.0f, 8, pz - 2}, 0.8f, YELLOW);
       } else {
         if (modelLoaded) {
-            // Disable backface culling in case normals are inverted, and raise to y=0.7
-            rlDisableBackfaceCulling();
-            DrawModelEx(trashBinModel, (Vector3){-16.0f, 0.7f, pz}, (Vector3){0, 1, 0}, 0.0f, (Vector3){0.6f, 0.6f, 0.6f}, WHITE);
-            DrawModelEx(trashBinModel, (Vector3){16.0f, 0.7f, pz}, (Vector3){0, 1, 0}, 0.0f, (Vector3){0.6f, 0.6f, 0.6f}, WHITE);
-            rlEnableBackfaceCulling();
+          // Disable backface culling in case normals are inverted, and raise to
+          // y=0.7
+          rlDisableBackfaceCulling();
+          DrawModelEx(trashBinModel, (Vector3){-16.0f, 0.7f, pz},
+                      (Vector3){0, 1, 0}, 0.0f, (Vector3){0.6f, 0.6f, 0.6f},
+                      WHITE);
+          DrawModelEx(trashBinModel, (Vector3){16.0f, 0.7f, pz},
+                      (Vector3){0, 1, 0}, 0.0f, (Vector3){0.6f, 0.6f, 0.6f},
+                      WHITE);
+          rlEnableBackfaceCulling();
         } else {
-            DrawCube((Vector3){-16.0f, 0.6f, pz}, 1.2f, 1.2f, 1.2f, (Color){50, 50, 55, 254});
-            DrawCube((Vector3){16.0f, 0.6f, pz}, 1.2f, 1.2f, 1.2f, (Color){50, 50, 55, 254});
+          DrawCube((Vector3){-16.0f, 0.6f, pz}, 1.2f, 1.2f, 1.2f,
+                   (Color){50, 50, 55, 254});
+          DrawCube((Vector3){16.0f, 0.6f, pz}, 1.2f, 1.2f, 1.2f,
+                   (Color){50, 50, 55, 254});
         }
       }
     }
@@ -201,7 +209,8 @@ void CityMap::Draw(int detailLevel, Vector3 viewPos, int currentWave) {
   // Other Buildings
   for (const auto &b : buildings) {
     // OPTIMIZATION: Distance Culling
-    if (detailLevel > 0 && Vector3Distance(b.pos, viewPos) > 1200.0f) continue;
+    if (detailLevel > 0 && Vector3Distance(b.pos, viewPos) > 1200.0f)
+      continue;
 
     DrawPlane((Vector3){b.pos.x, 0.08f, b.pos.z},
               (Vector2){b.size.x + 10, b.size.z + 10}, Fade(BLACK, 0.6f));
@@ -331,93 +340,143 @@ void CityMap::DrawMainBase(int currentWave) {
 
   // --- KEBAB STAND (Ground Floor) ---
   Vector3 standPos = {bp.x + 15, 0, bp.z + 10};
-  
+
   // Base counter
-  DrawCube((Vector3){standPos.x, 1.0f, standPos.z}, 8.0f, 2.0f, 4.0f, (Color){128, 0, 0, 254}); 
+  DrawCube((Vector3){standPos.x, 1.0f, standPos.z}, 8.0f, 2.0f, 4.0f,
+           (Color){128, 0, 0, 254});
   // Counter top
-  DrawCube((Vector3){standPos.x, 2.05f, standPos.z}, 8.2f, 0.1f, 4.2f, LIGHTGRAY);
-  
+  DrawCube((Vector3){standPos.x, 2.05f, standPos.z}, 8.2f, 0.1f, 4.2f,
+           LIGHTGRAY);
+
   // Roof supporting poles
-  DrawCylinder((Vector3){standPos.x - 3.8f, 2.0f, standPos.z - 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
-  DrawCylinder((Vector3){standPos.x + 3.8f, 2.0f, standPos.z - 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
-  DrawCylinder((Vector3){standPos.x - 3.8f, 2.0f, standPos.z + 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
-  DrawCylinder((Vector3){standPos.x + 3.8f, 2.0f, standPos.z + 1.8f}, 0.05f, 0.05f, 2.0f, 4, DARKGRAY);
-  
+  DrawCylinder((Vector3){standPos.x - 3.8f, 2.0f, standPos.z - 1.8f}, 0.05f,
+               0.05f, 2.0f, 4, DARKGRAY);
+  DrawCylinder((Vector3){standPos.x + 3.8f, 2.0f, standPos.z - 1.8f}, 0.05f,
+               0.05f, 2.0f, 4, DARKGRAY);
+  DrawCylinder((Vector3){standPos.x - 3.8f, 2.0f, standPos.z + 1.8f}, 0.05f,
+               0.05f, 2.0f, 4, DARKGRAY);
+  DrawCylinder((Vector3){standPos.x + 3.8f, 2.0f, standPos.z + 1.8f}, 0.05f,
+               0.05f, 2.0f, 4, DARKGRAY);
+
   // Roof
-  DrawCube((Vector3){standPos.x, 4.0f, standPos.z}, 9.0f, 0.2f, 5.0f, (Color){255, 200, 0, 254}); 
-  DrawText3D("TURKISH KEBAB", (Vector3){standPos.x - 2.5f, 4.2f, standPos.z - 2.6f}, 0.4f, 0.1f, GOLD);
+  DrawCube((Vector3){standPos.x, 4.0f, standPos.z}, 9.0f, 0.2f, 5.0f,
+           (Color){255, 200, 0, 254});
+  DrawText3D("TURKISH KEBAB",
+             (Vector3){standPos.x - 2.5f, 4.2f, standPos.z - 2.6f}, 0.4f, 0.1f,
+             GOLD);
 
   // The kebabs (vertical meat spits)
-  DrawCylinderEx((Vector3){standPos.x - 2.0f, 2.1f, standPos.z}, (Vector3){standPos.x - 2.0f, 3.3f, standPos.z}, 0.3f, 0.3f, 16, (Color){200, 100, 0, 254});
-  DrawCylinderEx((Vector3){standPos.x, 2.1f, standPos.z}, (Vector3){standPos.x, 3.6f, standPos.z}, 0.45f, 0.45f, 16, (Color){210, 110, 0, 254});
-  DrawCylinderEx((Vector3){standPos.x + 2.0f, 2.1f, standPos.z}, (Vector3){standPos.x + 2.0f, 3.9f, standPos.z}, 0.6f, 0.6f, 16, (Color){220, 120, 0, 254});
+  DrawCylinderEx((Vector3){standPos.x - 2.0f, 2.1f, standPos.z},
+                 (Vector3){standPos.x - 2.0f, 3.3f, standPos.z}, 0.3f, 0.3f, 16,
+                 (Color){200, 100, 0, 254});
+  DrawCylinderEx((Vector3){standPos.x, 2.1f, standPos.z},
+                 (Vector3){standPos.x, 3.6f, standPos.z}, 0.45f, 0.45f, 16,
+                 (Color){210, 110, 0, 254});
+  DrawCylinderEx((Vector3){standPos.x + 2.0f, 2.1f, standPos.z},
+                 (Vector3){standPos.x + 2.0f, 3.9f, standPos.z}, 0.6f, 0.6f, 16,
+                 (Color){220, 120, 0, 254});
 
   // --- WEAPON SCREENS (TIERED BY FLOOR) ---
   for (int shopLevel = 0; shopLevel <= 3; shopLevel++) {
-      float sy = shopLevel * fh; // Y position of the floor
-      Vector3 screenPos = {bp.x - 24.5f, sy + 4.0f, bp.z};
-      
-      DrawCube(screenPos, 0.5f, 7.0f, 18, (Color){10, 10, 15, 255}); // Height 7 fits under 8 unit ceiling
-      DrawCube((Vector3){screenPos.x + 0.1f, screenPos.y, screenPos.z}, 0.1f, 6.6f,
-               17.5f, Fade(SKYBLUE, 0.3f)); // Screen glow
-      
-      float pulse = sinf((float)GetTime() * 3.0f) * 0.15f + 0.35f;
-      DrawCube((Vector3){screenPos.x + 0.15f, screenPos.y, screenPos.z}, 0.05f, 6.8f,
-               17.8f, Fade(GOLD, pulse));
-               
-      EndShaderMode(); // Text shouldn't use the lighting shader
-      
-      int requiredWave = (shopLevel == 1) ? 10 : (shopLevel == 2) ? 20 : (shopLevel == 3) ? 30 : 1;
-      
-      if (currentWave < requiredWave) {
-          DrawText3D(TextFormat("=== TIER %d LOCKED ===", shopLevel),
-                     (Vector3){screenPos.x + 0.3f, screenPos.y + 2.8f, screenPos.z},
-                     0.6f, 0.1f, RED);
-          DrawText3D(TextFormat("UNLOCKS AT WAVE: %d", requiredWave),
-                     (Vector3){screenPos.x + 0.3f, screenPos.y + 1.0f, screenPos.z},
-                     0.5f, 0.1f, ORANGE);
-      } else {
-          DrawText3D(TextFormat("=== WEAPON TIER %d ===", shopLevel),
-                     (Vector3){screenPos.x + 0.3f, screenPos.y + 2.8f, screenPos.z},
-                     0.45f, 0.1f, GOLD);
-                     
-          float col1Z = screenPos.z - 4.5f;
-          float col2Z = screenPos.z + 4.5f;
-          
-          if (shopLevel == 0) { // TIER 0 (Floor 0)
-              DrawText3D("GLOCK: FREE",     (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z}, 0.35f, 0.1f, LIGHTGRAY);
-              DrawText3D("REVOLVER: $1000", (Vector3){screenPos.x + 0.3f, screenPos.y + 0.2f, col1Z}, 0.35f, 0.1f, WHITE);
-              DrawText3D("AK-47: $1500",    (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, WHITE);
-              DrawText3D("SHOTGUN: $2000",  (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col1Z}, 0.35f, 0.1f, WHITE);
-              
-              DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
-          }
-          else if (shopLevel == 1) { // TIER 1 (Floor 1)
-              DrawText3D("MINIGUN: $5000",  (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z}, 0.35f, 0.1f, ORANGE);
-              DrawText3D("RPG: $12000",     (Vector3){screenPos.x + 0.3f, screenPos.y + 0.2f, col1Z}, 0.35f, 0.1f, RED);
-              DrawText3D("AWP: $8000",      (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, SKYBLUE);
-              DrawText3D("WALL T1: $800",   (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col1Z}, 0.35f, 0.1f, BROWN);
-              
-              DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
-              DrawText3D("TURRET T1: $3000",(Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col2Z}, 0.35f, 0.1f, VIOLET);
-          }
-          else if (shopLevel == 2) { // TIER 2 (Floor 2)
-              DrawText3D("WALL T2: $1600",  (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, BROWN);
-              DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
-              DrawText3D("TURRET T2: $6000",(Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col2Z}, 0.35f, 0.1f, VIOLET);
-          }
-          else if (shopLevel == 3) { // TIER 3 (Floor 3)
-              DrawText3D("WALL T3: $3200",  (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z}, 0.35f, 0.1f, BROWN);
-              DrawText3D("AMMO: $500",      (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z}, 0.35f, 0.1f, GREEN);
-              DrawText3D("TURRET T3: $12000",(Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col2Z}, 0.35f, 0.1f, VIOLET);
-          }
-          
-          DrawText3D(TextFormat(">>> PRESS 'E' TO BUY (TIER %d) <<<", shopLevel),
-                     (Vector3){screenPos.x + 0.3f, screenPos.y - 3.2f, screenPos.z},
-                     0.22f, 0.1f, LIME);
+    float sy = shopLevel * fh; // Y position of the floor
+    Vector3 screenPos = {bp.x - 24.5f, sy + 4.0f, bp.z};
+
+    DrawCube(screenPos, 0.5f, 7.0f, 18,
+             (Color){10, 10, 15, 255}); // Height 7 fits under 8 unit ceiling
+    DrawCube((Vector3){screenPos.x + 0.1f, screenPos.y, screenPos.z}, 0.1f,
+             6.6f, 17.5f, Fade(SKYBLUE, 0.3f)); // Screen glow
+
+    float pulse = sinf((float)GetTime() * 3.0f) * 0.15f + 0.35f;
+    DrawCube((Vector3){screenPos.x + 0.15f, screenPos.y, screenPos.z}, 0.05f,
+             6.8f, 17.8f, Fade(GOLD, pulse));
+
+    EndShaderMode(); // Text shouldn't use the lighting shader
+
+    int requiredWave = (shopLevel == 1)   ? 10
+                       : (shopLevel == 2) ? 20
+                       : (shopLevel == 3) ? 30
+                                          : 1;
+
+    if (currentWave < requiredWave) {
+      DrawText3D(TextFormat("=== TIER %d LOCKED ===", shopLevel),
+                 (Vector3){screenPos.x + 0.3f, screenPos.y + 2.8f, screenPos.z},
+                 0.6f, 0.1f, RED);
+      DrawText3D(TextFormat("UNLOCKS AT WAVE: %d", requiredWave),
+                 (Vector3){screenPos.x + 0.3f, screenPos.y + 1.0f, screenPos.z},
+                 0.5f, 0.1f, ORANGE);
+    } else {
+      DrawText3D(TextFormat("=== WEAPON TIER %d ===", shopLevel),
+                 (Vector3){screenPos.x + 0.3f, screenPos.y + 2.8f, screenPos.z},
+                 0.45f, 0.1f, GOLD);
+
+      float col1Z = screenPos.z - 4.5f;
+      float col2Z = screenPos.z + 4.5f;
+
+      if (shopLevel == 0) { // TIER 0 (Floor 0)
+        DrawText3D("GLOCK: FREE",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z},
+                   0.35f, 0.1f, LIGHTGRAY);
+        DrawText3D("REVOLVER: $1000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 0.2f, col1Z},
+                   0.35f, 0.1f, WHITE);
+        DrawText3D("AK-47: $1500",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z},
+                   0.35f, 0.1f, WHITE);
+        DrawText3D("SHOTGUN: $2000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col1Z},
+                   0.35f, 0.1f, WHITE);
+
+        DrawText3D("AMMO: $500",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z},
+                   0.35f, 0.1f, GREEN);
+      } else if (shopLevel == 1) { // TIER 1 (Floor 1)
+        DrawText3D("MINIGUN: $5000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col1Z},
+                   0.35f, 0.1f, ORANGE);
+        DrawText3D("RPG: $12000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 0.2f, col1Z},
+                   0.35f, 0.1f, RED);
+        DrawText3D("AWP: $8000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z},
+                   0.35f, 0.1f, SKYBLUE);
+        DrawText3D("WALL T1: $800",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col1Z},
+                   0.35f, 0.1f, BROWN);
+
+        DrawText3D("AMMO: $500",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z},
+                   0.35f, 0.1f, GREEN);
+        DrawText3D("TURRET T1: $3000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 2.2f, col2Z},
+                   0.35f, 0.1f, VIOLET);
+      } else if (shopLevel == 2) { // TIER 2 (Floor 2)
+        DrawText3D("WALL T2: $1600",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z},
+                   0.35f, 0.1f, BROWN);
+        DrawText3D("AMMO: $500",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z},
+                   0.35f, 0.1f, GREEN);
+        DrawText3D("TURRET T2: $6000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col2Z},
+                   0.35f, 0.1f, VIOLET);
+      } else if (shopLevel == 3) { // TIER 3 (Floor 3)
+        DrawText3D("WALL T3: $3200",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col1Z},
+                   0.35f, 0.1f, BROWN);
+        DrawText3D("AMMO: $500",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y + 1.4f, col2Z},
+                   0.35f, 0.1f, GREEN);
+        DrawText3D("TURRET T3: $12000",
+                   (Vector3){screenPos.x + 0.3f, screenPos.y - 1.0f, col2Z},
+                   0.35f, 0.1f, VIOLET);
       }
-      
-      // End of shop screen loop
+
+      DrawText3D(TextFormat(">>> PRESS 'E' TO BUY (TIER %d) <<<", shopLevel),
+                 (Vector3){screenPos.x + 0.3f, screenPos.y - 3.2f, screenPos.z},
+                 0.22f, 0.1f, LIME);
+    }
+
+    // End of shop screen loop
   }
 
   // Roof access structure
@@ -427,16 +486,18 @@ void CityMap::DrawMainBase(int currentWave) {
 
   // --- TANK TERMINAL (In front of base) ---
   Vector3 terminalPos = {15, 0, 120};
-  DrawCube((Vector3){terminalPos.x, 1, terminalPos.z}, 1.5f, 2, 1.5f, DARKGRAY); // Stand
-  DrawCube((Vector3){terminalPos.x, 2.1f, terminalPos.z}, 2.5f, 0.2f, 2.0f, GRAY); // Screen base
-  
+  DrawCube((Vector3){terminalPos.x, 1, terminalPos.z}, 1.5f, 2, 1.5f,
+           DARKGRAY); // Stand
+  DrawCube((Vector3){terminalPos.x, 2.1f, terminalPos.z}, 2.5f, 0.2f, 2.0f,
+           GRAY); // Screen base
+
   // Terminal Screen
   rlPushMatrix();
   rlTranslatef(terminalPos.x, 2.5f, terminalPos.z);
   rlRotatef(-30, 1, 0, 0); // Angle screen
   DrawCube({0, 0, 0}, 2.2f, 1.5f, 0.1f, {20, 20, 30, 255});
   DrawCube({0, 0, 0.06f}, 2.0f, 1.3f, 0.05f, Fade(LIME, 0.4f));
-  
+
   EndShaderMode();
   DrawText3D("TANK DEPOT", {0.1f, 0.3f, 0.1f}, 0.2f, 0.05f, GOLD);
   DrawText3D("BUY: $100k", {0.1f, -0.2f, 0.1f}, 0.15f, 0.05f, WHITE);
@@ -448,76 +509,81 @@ float CityMap::GetHeight(float x, float z) { return 0.0f; }
 
 void CityMap::DrawText3D(const char *text, Vector3 pos, float size,
                          float spacing, Color col) {
-    // Basic 3D Text using Raylib's default font rendered in 3D space
-    Font font = GetFontDefault();
-    Vector2 textSize = MeasureTextEx(font, text, size * 100, spacing * 100);
-    
-    rlPushMatrix();
-    rlTranslatef(pos.x, pos.y, pos.z);
-    
-    // Rotate to face the player (aligned with the shop screen which is on YZ plane)
-    rlRotatef(90, 0, 1, 0); 
-    
-    rlTranslatef(-textSize.x * 0.005f, 0, 0); // Center text
-    rlScalef(0.01f, -0.01f, 0.01f); // Scale down to world units and flip Y for correct orientation
-    
-    DrawTextEx(font, text, (Vector2){0, 0}, size * 100, spacing * 100, col);
-    
-    rlPopMatrix();
+  // Basic 3D Text using Raylib's default font rendered in 3D space
+  Font font = GetFontDefault();
+  Vector2 textSize = MeasureTextEx(font, text, size * 100, spacing * 100);
+
+  rlPushMatrix();
+  rlTranslatef(pos.x, pos.y, pos.z);
+
+  // Rotate to face the player (aligned with the shop screen which is on YZ
+  // plane)
+  rlRotatef(90, 0, 1, 0);
+
+  rlTranslatef(-textSize.x * 0.005f, 0, 0); // Center text
+  rlScalef(
+      0.01f, -0.01f,
+      0.01f); // Scale down to world units and flip Y for correct orientation
+
+  DrawTextEx(font, text, (Vector2){0, 0}, size * 100, spacing * 100, col);
+
+  rlPopMatrix();
 }
 
 // ── Editor Integration: Save buildings to data file ──
-bool CityMap::SaveBuildingsToFile(const char* path) {
-    FILE* f = fopen(path, "w");
-    if (!f) return false;
-    fprintf(f, "CITY_BUILDINGS %d\n", (int)buildings.size());
-    for (auto& b : buildings) {
-        fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d\n",
-            b.pos.x, b.pos.y, b.pos.z,
-            b.size.x, b.size.y, b.size.z,
-            b.color.r, b.color.g, b.color.b, b.color.a);
-    }
-    fclose(f);
-    printf("[EDITOR] Saved %d buildings to %s\n", (int)buildings.size(), path);
-    return true;
+bool CityMap::SaveBuildingsToFile(const char *path) {
+  FILE *f = fopen(path, "w");
+  if (!f)
+    return false;
+  fprintf(f, "CITY_BUILDINGS %d\n", (int)buildings.size());
+  for (auto &b : buildings) {
+    fprintf(f, "%.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d\n", b.pos.x, b.pos.y,
+            b.pos.z, b.size.x, b.size.y, b.size.z, b.color.r, b.color.g,
+            b.color.b, b.color.a);
+  }
+  fclose(f);
+  printf("[EDITOR] Saved %d buildings to %s\n", (int)buildings.size(), path);
+  return true;
 }
 
 // ── Editor Integration: Load buildings from data file ──
-bool CityMap::LoadBuildingsFromFile(const char* path) {
-    FILE* f = fopen(path, "r");
-    if (!f) return false;
-    int count = 0;
-    if (fscanf(f, "CITY_BUILDINGS %d\n", &count) != 1) { fclose(f); return false; }
-    buildings.clear();
-    for (int i = 0; i < count; i++) {
-        float px,py,pz, sx,sy,sz;
-        int r,g,b,a;
-        if (fscanf(f, "%f %f %f %f %f %f %d %d %d %d\n",
-            &px,&py,&pz, &sx,&sy,&sz, &r,&g,&b,&a) == 10) {
-            buildings.push_back({
-                {px,py,pz}, {sx,sy,sz},
-                {(unsigned char)r,(unsigned char)g,(unsigned char)b,(unsigned char)a}
-            });
-        }
-    }
+bool CityMap::LoadBuildingsFromFile(const char *path) {
+  FILE *f = fopen(path, "r");
+  if (!f)
+    return false;
+  int count = 0;
+  if (fscanf(f, "CITY_BUILDINGS %d\n", &count) != 1) {
     fclose(f);
-    printf("[EDITOR] Loaded %d buildings from %s\n", (int)buildings.size(), path);
-    return true;
+    return false;
+  }
+  buildings.clear();
+  for (int i = 0; i < count; i++) {
+    float px, py, pz, sx, sy, sz;
+    int r, g, b, a;
+    if (fscanf(f, "%f %f %f %f %f %f %d %d %d %d\n", &px, &py, &pz, &sx, &sy,
+               &sz, &r, &g, &b, &a) == 10) {
+      buildings.push_back({{px, py, pz},
+                           {sx, sy, sz},
+                           {(unsigned char)r, (unsigned char)g,
+                            (unsigned char)b, (unsigned char)a}});
+    }
+  }
+  fclose(f);
+  printf("[EDITOR] Loaded %d buildings from %s\n", (int)buildings.size(), path);
+  return true;
 }
 
 // ── Rebuild obstacle boxes from current buildings list ──
 void CityMap::RebuildObstaclesFromBuildings() {
-    // Remove old building obstacles (they're the first N entries)
-    // We clear and rebuild ALL obstacles including base, props etc.
-    obstacles.clear();
-    
-    // Building obstacles
-    for (auto& b : buildings) {
-        float hw = b.size.x / 2.0f;
-        float hd = b.size.z / 2.0f;
-        obstacles.push_back({
-            {b.pos.x - hw, 0, b.pos.z - hd},
-            {b.pos.x + hw, b.size.y, b.pos.z + hd}
-        });
-    }
+  // Remove old building obstacles (they're the first N entries)
+  // We clear and rebuild ALL obstacles including base, props etc.
+  obstacles.clear();
+
+  // Building obstacles
+  for (auto &b : buildings) {
+    float hw = b.size.x / 2.0f;
+    float hd = b.size.z / 2.0f;
+    obstacles.push_back({{b.pos.x - hw, 0, b.pos.z - hd},
+                         {b.pos.x + hw, b.size.y, b.pos.z + hd}});
+  }
 }
