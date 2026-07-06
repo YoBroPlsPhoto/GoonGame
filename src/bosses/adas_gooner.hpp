@@ -25,4 +25,12 @@ public:
     float shockwaveTimer = 0.0f;
     float summonTimer = 0.0f;
     bool isEnraged = false;
+
+    // White laser special attack
+    float laserCooldown = 20.0f;   // Time until next laser (starts after 20s)
+    float laserChargeTimer = 0.0f; // Charge-up before firing
+    float laserFireTimer = 0.0f;   // How long the laser has been firing
+    bool laserFiring = false;      // Is the laser currently active
+    bool laserCharging = false;    // Is the laser charging up
+    Vector3 laserTargetPos = {0, 0, 0}; // Where the laser is aimed
 };

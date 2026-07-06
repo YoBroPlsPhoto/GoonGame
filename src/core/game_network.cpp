@@ -6,7 +6,8 @@ void Game::UpdateNetworkAndEnemies() {
         if (state == GameState::GAME || state == GameState::PAUSED) {
           int enemyIdCounter = 0;
           int totalEnemiesThisWave = 5 + currentWave * 4;
-          if (currentWave == 10 || currentWave == 20 || currentWave == 30)
+          if (currentWave == 10 || currentWave == 20 || currentWave == 30 ||
+              currentWave == 35)
             totalEnemiesThisWave = 1;
           if (currentWave == 40)
             totalEnemiesThisWave = 15; // 1 boss + 14 guards
@@ -36,6 +37,12 @@ void Game::UpdateNetworkAndEnemies() {
                   guard->hp *= 2.0f;
                   guard->maxHp = guard->hp;
                   enemies.push_back(guard);
+                }
+              } else if (currentWave == 35) {
+                if (enemiesSpawnedSinceStartOfWave == 0) {
+                  Vector3 lucaSpawn = {0.0f, 0.1f, -400.0f};
+                  enemies.push_back(
+                      std::make_shared<LucaBoss>(lucaSpawn, ++enemyIdCounter));
                 }
               } else if (currentWave == 30) {
                 if (enemiesSpawnedSinceStartOfWave == 0) {
@@ -310,6 +317,17 @@ void Game::UpdateNetworkAndEnemies() {
             syncList.push_back({e->id, e->position, e->hp, e->maxHp,
                                 (int)e->type, (int)e->weapon, e->angle,
                                 e->isMoving, e->walkTimer, e->attackTimer});
+            // Override sync fields for AdasGooner boss
+            if (e->type == EnemyType::BOSS) {
+              auto adas = std::dynamic_pointer_cast<AdasGooner>(e);
+              if (adas) {
+                syncList.back().attackTimer = (float)(int)adas->cutsceneState;
+                syncList.back().walkTimer = adas->cutsceneTimer;
+                syncList.back().specialPos = adas->laserTargetPos;
+                syncList.back().specialActive = (adas->laserCharging ? 1 : (adas->laserFiring ? 2 : 0));
+                syncList.back().specialTimer = adas->laserCharging ? adas->laserChargeTimer : adas->laserFireTimer;
+              }
+            }
             // Override sync fields for Gibon boss (same pattern as AdasGooner)
             if (e->type == EnemyType::GIBON_BOSS) {
               auto gibon = std::dynamic_pointer_cast<GibonRzygacz>(e);
@@ -332,6 +350,12 @@ void Game::UpdateNetworkAndEnemies() {
               if (prime) {
                 syncList.back().attackTimer = (float)(int)prime->cutsceneState;
                 syncList.back().walkTimer = prime->cutsceneTimer;
+              }
+            }
+            if (e->type == EnemyType::LUCA_BOSS) {
+              auto luca = std::dynamic_pointer_cast<LucaBoss>(e);
+              if (luca) {
+                syncList.back().walkTimer = luca->portalTimer;
               }
             }
           }
@@ -407,7 +431,8 @@ void Game::UpdateNetworkAndEnemies() {
                   continue;
                 if (CheckCollisionBoxes(tankBox, e->GetBoundingBox())) {
                   bool isBoss = (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS || 
-                                 e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME);
+                                 e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME ||
+                                 e->type == EnemyType::LUCA_BOSS);
                   
                   float currentSpeedVal = fabsf(tank->speed);
                   float threshold = isBoss ? 0.76f : 0.40f; // 76 is 95% of 80, 40 is half

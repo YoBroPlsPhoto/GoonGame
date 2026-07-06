@@ -115,7 +115,7 @@ void Menu::Draw(bool drawUI) {
             currentState = MenuState::OPTIONS;
         }
         if (DrawButton((Rectangle){startX, startY + 240, 300, 60}, "EXIT", MAROON)) {
-             CloseWindow();
+             shouldExit = true;
         }
     } else if (currentState == MenuState::HOST) {
         DrawText("ENTER HOSTNAME:", (int)startX, (int)startY - 40, 20, RAYWHITE);

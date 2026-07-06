@@ -11,6 +11,8 @@ static const char *GetBossDetectedName(EnemyType type) {
     return "THE GANG";
   case EnemyType::ADAS_PRIME:
     return "ADAS PRIME";
+  case EnemyType::LUCA_BOSS:
+    return "GOON LORD-LUCA";
   default:
     return "BOSS";
   }
@@ -456,6 +458,16 @@ void Game::Render() {
           adas->cutsceneTimer = e.walkTimer;
           adas->isMoving = e.isMoving;
           adas->angle = e.angle;
+          
+          adas->laserTargetPos = e.specialPos;
+          if (e.specialActive == 1) {
+              adas->laserCharging = true;
+              adas->laserChargeTimer = e.specialTimer;
+          } else if (e.specialActive == 2) {
+              adas->laserFiring = true;
+              adas->laserFireTimer = e.specialTimer;
+          }
+          
           temp = adas;
         } else if (e.type == (int)EnemyType::GIBON_BOSS) {
           auto gibon = std::make_shared<GibonRzygacz>(e.pos, e.id);
@@ -486,6 +498,23 @@ void Game::Render() {
           prime->isMoving = e.isMoving;
           prime->wardrobePos = e.pos;
           temp = prime;
+        } else if (e.type == (int)EnemyType::LUCA_BOSS) {
+          auto luca = std::make_shared<LucaBoss>(e.pos, e.id);
+          luca->position = e.pos;
+          luca->portalTimer = e.walkTimer;
+          luca->portalPos = e.pos;
+          luca->portalPos.y = 0.0f;
+          if (e.walkTimer < 2.6f) {
+            luca->portalPos.z = e.pos.z + 12.0f;
+          } else if (e.walkTimer < 5.4f) {
+            float t = (e.walkTimer - 2.6f) / 2.8f;
+            luca->portalPos.z = e.pos.z + 12.0f - t * 15.0f;
+          }
+          luca->angle = e.angle;
+          luca->isMoving = e.isMoving;
+          luca->walkTimer = e.isMoving ? e.walkTimer : 0.0f;
+          luca->attackTimer = e.attackTimer;
+          temp = luca;
         } else {
           temp = std::make_shared<Enemy>(e.pos, (EnemyType)e.type,
                                          (WeaponType)e.weapon, e.id);
@@ -561,7 +590,8 @@ void Game::Render() {
       for (auto &e : enemies) {
         if (e->type != EnemyType::BOSS && e->type != EnemyType::GIBON_BOSS &&
             e->type != EnemyType::GANG_BOSS &&
-            e->type != EnemyType::ADAS_PRIME) {
+            e->type != EnemyType::ADAS_PRIME &&
+            e->type != EnemyType::LUCA_BOSS) {
           e->DrawHUD(activeCam);
         }
       }
@@ -572,6 +602,18 @@ void Game::Render() {
           auto adas = std::make_shared<AdasGooner>(e.pos, e.id);
           adas->cutsceneState = (CutsceneState)(int)e.attackTimer;
           adas->cutsceneTimer = e.walkTimer;
+          adas->isMoving = e.isMoving;
+          adas->angle = e.angle;
+          
+          adas->laserTargetPos = e.specialPos;
+          if (e.specialActive == 1) {
+              adas->laserCharging = true;
+              adas->laserChargeTimer = e.specialTimer;
+          } else if (e.specialActive == 2) {
+              adas->laserFiring = true;
+              adas->laserFireTimer = e.specialTimer;
+          }
+          
           temp = adas;
         } else if (e.type == (int)EnemyType::GIBON_BOSS) {
           auto gibon = std::make_shared<GibonRzygacz>(e.pos, e.id);
@@ -583,6 +625,23 @@ void Game::Render() {
           gang->cutsceneState = (GangCutscene)(int)e.attackTimer;
           gang->stateTimer = e.walkTimer;
           temp = gang;
+        } else if (e.type == (int)EnemyType::LUCA_BOSS) {
+          auto luca = std::make_shared<LucaBoss>(e.pos, e.id);
+          luca->position = e.pos;
+          luca->portalTimer = e.walkTimer;
+          luca->portalPos = e.pos;
+          luca->portalPos.y = 0.0f;
+          if (e.walkTimer < 2.6f) {
+            luca->portalPos.z = e.pos.z + 12.0f;
+          } else if (e.walkTimer < 5.4f) {
+            float t = (e.walkTimer - 2.6f) / 2.8f;
+            luca->portalPos.z = e.pos.z + 12.0f - t * 15.0f;
+          }
+          luca->angle = e.angle;
+          luca->isMoving = e.isMoving;
+          luca->walkTimer = e.isMoving ? e.walkTimer : 0.0f;
+          luca->attackTimer = e.attackTimer;
+          temp = luca;
         } else {
           temp = std::make_shared<Enemy>(e.pos, (EnemyType)e.type,
                                          (WeaponType)e.weapon, e.id);
@@ -598,7 +657,8 @@ void Game::Render() {
         if (temp->type != EnemyType::BOSS &&
             temp->type != EnemyType::GIBON_BOSS &&
             temp->type != EnemyType::GANG_BOSS &&
-            temp->type != EnemyType::ADAS_PRIME) {
+            temp->type != EnemyType::ADAS_PRIME &&
+            temp->type != EnemyType::LUCA_BOSS) {
           temp->DrawHUD(activeCam);
         }
       }
@@ -808,7 +868,8 @@ void Game::Render() {
         for (auto &e : enemies) {
           if (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS ||
               e->type == EnemyType::GANG_BOSS ||
-              e->type == EnemyType::ADAS_PRIME) {
+              e->type == EnemyType::ADAS_PRIME ||
+              e->type == EnemyType::LUCA_BOSS) {
             activeBoss = e;
             break;
           }
@@ -819,7 +880,8 @@ void Game::Render() {
           if (e.type == (int)EnemyType::BOSS ||
               e.type == (int)EnemyType::GIBON_BOSS ||
               e.type == (int)EnemyType::GANG_BOSS ||
-              e.type == (int)EnemyType::ADAS_PRIME) {
+              e.type == (int)EnemyType::ADAS_PRIME ||
+              e.type == (int)EnemyType::LUCA_BOSS) {
             activeBoss = std::make_shared<Enemy>(e.pos, (EnemyType)e.type,
                                                  WeaponType::KATANA, e.id);
             activeBoss->hp = e.hp;
@@ -850,6 +912,8 @@ void Game::Render() {
           bossName = "THE GANG";
         else if (activeBoss->type == EnemyType::ADAS_PRIME)
           bossName = "ADAS PRIME";
+        else if (activeBoss->type == EnemyType::LUCA_BOSS)
+          bossName = "GOON LORD-LUCA";
 
         int tw = MeasureText(bossName, 25);
         DrawText(bossName, sw / 2 - tw / 2, by - 30, 25, GOLD);
@@ -1280,7 +1344,8 @@ void Game::Render() {
       for (auto const &[id, e] : net.syncedEnemies) {
         EnemyType type = (EnemyType)e.type;
         if (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS ||
-            type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME) {
+            type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME ||
+            type == EnemyType::LUCA_BOSS) {
           detectedBossType = type;
           break;
         }

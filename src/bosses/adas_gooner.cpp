@@ -116,9 +116,121 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
         }
     } else {
         // Normal Behavior
-        Enemy::Update(players, baseHp, basePos);
         
-        // --- SPECIAL ATTACKS ---
+        float dt = GetFrameTime();
+        
+        // --- WHITE LASER SPECIAL ATTACK ---
+        if (laserFiring) {
+            // Laser is firing - deal damage and track target
+            laserFireTimer += dt;
+            isMoving = false;
+            
+            // Update laser target to track nearest player in real-time
+            float closestD = 999.0f;
+            for (const auto& p : players) {
+                if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                if (p.isStructure) continue;
+                float d = Vector3Distance(position, p.pos);
+                if (d < closestD) {
+                    closestD = d;
+                    laserTargetPos = p.pos;
+                    laserTargetPos.y += 1.0f; // Aim at chest height
+                }
+            }
+            
+            // Deal damage to players in laser path
+            Vector3 laserOrigin = position;
+            laserOrigin.y += 0.8f * 9.0f; // Crotch height in world space (scale=9)
+            Vector3 laserDir = Vector3Subtract(laserTargetPos, laserOrigin);
+            float laserLen = Vector3Length(laserDir);
+            if (laserLen > 0.1f) {
+                laserDir = Vector3Normalize(laserDir);
+                // Face the target
+                angle = atan2f(laserDir.x, laserDir.z) * RAD2DEG;
+                
+                for (const auto& p : players) {
+                    if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                    if (p.isStructure) continue;
+                    
+                    // Check if player is close to the laser line
+                    Vector3 toPlayer = Vector3Subtract(p.pos, laserOrigin);
+                    float proj = Vector3DotProduct(toPlayer, laserDir);
+                    if (proj > 0 && proj < laserLen + 5.0f) {
+                        Vector3 closestPoint = Vector3Add(laserOrigin, Vector3Scale(laserDir, proj));
+                        float distToBeam = Vector3Distance(p.pos, closestPoint);
+                        if (distToBeam < 4.0f && p.hp) { // 4 unit beam width
+                            *p.hp -= 1; // Damage per frame (~60 dps at 60fps), much more survivable
+                        }
+                    }
+                }
+            }
+            
+            if (laserFireTimer >= 2.5f) {
+                laserFiring = false;
+                laserFireTimer = 0.0f;
+                laserCooldown = 20.0f; // 20 seconds until next laser
+            }
+        } else if (laserCharging) {
+            // Charging up - boss stops and glows
+            laserChargeTimer += dt;
+            isMoving = false;
+            
+            // Find target during charge
+            float closestD = 999.0f;
+            for (const auto& p : players) {
+                if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                if (p.isStructure) continue;
+                float d = Vector3Distance(position, p.pos);
+                if (d < closestD) {
+                    closestD = d;
+                    laserTargetPos = p.pos;
+                    laserTargetPos.y += 1.0f;
+                }
+            }
+            
+            // Face the target during charge
+            Vector3 laserOrigin = position;
+            laserOrigin.y += 0.8f * 9.0f;
+            Vector3 dirToTarget = Vector3Subtract(laserTargetPos, laserOrigin);
+            if (Vector3Length(dirToTarget) > 0.1f) {
+                angle = atan2f(dirToTarget.x, dirToTarget.z) * RAD2DEG;
+            }
+            
+            if (laserChargeTimer >= 1.5f) {
+                laserCharging = false;
+                laserChargeTimer = 0.0f;
+                laserFiring = true;
+            }
+        } else {
+            // Normal movement + count down laser cooldown
+            Enemy::Update(players, baseHp, basePos);
+            
+            laserCooldown -= dt;
+            if (laserCooldown <= 0.0f) {
+                // Check if there's a player nearby to target
+                bool hasTarget = false;
+                float closestD = 60.0f; // 60 unit detection range for laser
+                for (const auto& p : players) {
+                    if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                    if (p.isStructure) continue;
+                    float d = Vector3Distance(position, p.pos);
+                    if (d < closestD) {
+                        closestD = d;
+                        laserTargetPos = p.pos;
+                        laserTargetPos.y += 1.0f;
+                        hasTarget = true;
+                    }
+                }
+                if (hasTarget) {
+                    laserCharging = true;
+                    laserChargeTimer = 0.0f;
+                } else {
+                    laserCooldown = 2.0f; // Check again in 2s
+                }
+            }
+        }
+        
+        // --- SHOCKWAVE ATTACK ---
         shockwaveTimer += GetFrameTime();
         if (shockwaveTimer > 10.0f) {
             bool atBaseEdge = DistanceToBaseFootprint(position, basePos) <= BASE_EDGE_AGGRO_DISTANCE;
@@ -127,8 +239,6 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
                 if (atBaseEdge && !p.isStructure && IsInsideBaseFootprint(p.pos, basePos)) continue;
                 float d = Vector3Distance(position, p.pos);
                 if (d < 20.0f) {
-                    // Push logic (vague since we don't have direct access to their pos as reference in a way to push them back to server?)
-                    // For now, we apply damage.
                     if (p.hp) *p.hp -= 10;
                 }
             }
@@ -221,75 +331,145 @@ void AdasGooner::Draw() {
         rlScalef(0.75f, 0.75f, 0.75f); 
         DrawModel(wafelModel, (Vector3){0, 0, 0}, 1.0f, WHITE);
         rlPopMatrix();
-        return;
+    } else {
+        // --- DRAW ADAS GOONER ---
+        float scale = 9.0f; // BOSS SIZE
+        float animWalk = isMoving ? sinf(walkTimer * speed * 30.0f) : 0.0f;
+        float animAttack = (attackTimer > 0) ? (1.0f - attackTimer / 1.5f) : 0.0f; // Slower cooldown logic mapped
+        
+        rlPushMatrix();
+        rlTranslatef(position.x, position.y, position.z);
+        rlRotatef(angle, 0, 1, 0);
+        rlScalef(scale, scale, scale);
+
+        Color skin = { 255, 180, 120, 255 }; // slightly paler
+        Color clothes = { 50, 50, 50, 255 }; // dark suit
+
+        // Legs
+        rlPushMatrix();
+        rlTranslatef(-0.2f, 0.4f, 0);
+        rlRotatef(animWalk * 35.0f, 1, 0, 0);
+        DrawCube((Vector3){0, 0, 0}, 0.25f, 0.8f, 0.25f, BLACK);
+        rlPopMatrix();
+
+        rlPushMatrix();
+        rlTranslatef(0.2f, 0.4f, 0);
+        rlRotatef(-animWalk * 35.0f, 1, 0, 0);
+        DrawCube((Vector3){0, 0, 0}, 0.25f, 0.8f, 0.25f, BLACK);
+        rlPopMatrix();
+
+        // Torso (Buffed)
+        rlPushMatrix();
+        DrawCube((Vector3){ 0, 1.25f, 0 }, 0.9f, 0.9f, 0.5f, clothes); 
+        DrawCube((Vector3){ 0, 1.75f, 0 }, 1.1f, 0.3f, 0.6f, clothes); // huge shoulders
+        rlPopMatrix();
+
+        // Arms
+        rlPushMatrix();
+        rlTranslatef(-0.55f, 1.5f, 0);
+        rlRotatef(-animWalk * 45.0f, 1, 0, 0);
+        DrawCube((Vector3){0, -0.35f, 0}, 0.25f, 0.8f, 0.25f, skin);
+        rlPopMatrix();
+
+        rlPushMatrix();
+        rlTranslatef(0.55f, 1.5f, 0);
+        if (animAttack > 0) rlRotatef(animAttack * -130.0f, 1, 0, 0);
+        else rlRotatef(animWalk * 45.0f, 1, 0, 0);
+        DrawCube((Vector3){0, -0.35f, 0}, 0.25f, 0.8f, 0.25f, skin);
+
+        // Giant Katana
+        rlPushMatrix();
+        rlTranslatef(0, -0.35f, 0.2f);
+        rlRotatef(90, 1, 0, 0);
+        DrawCube((Vector3){0, 1.2f, 0}, 0.1f, 2.8f, 0.1f, LIGHTGRAY);
+        DrawCube((Vector3){0, -0.1f, 0}, 0.2f, 0.4f, 0.2f, DARKPURPLE); // evil sword hilt
+        rlPopMatrix();
+        rlPopMatrix();
+
+        // Head
+        rlPushMatrix();
+        rlTranslatef(0, 2.1f, 0);
+        DrawCube((Vector3){0, 0, 0}, 0.5f, 0.5f, 0.5f, skin);
+        DrawCube((Vector3){-0.15f, 0.1f, 0.25f}, 0.1f, 0.1f, 0.1f, RED); // Red glowing glowing eyes
+        DrawCube((Vector3){0.15f, 0.1f, 0.25f}, 0.1f, 0.1f, 0.1f, RED);
+        
+        // Huge Crown
+        DrawCube((Vector3){0, 0.4f, 0}, 0.6f, 0.8f, 0.6f, GOLD); 
+        rlPopMatrix();
+
+        // Członek (Crotch detail)
+        rlPushMatrix();
+        rlTranslatef(0, 0.8f, 0.4f);
+        DrawCube((Vector3){0, 0, 0}, 0.2f, 0.2f, 0.4f, RED);
+        DrawCube((Vector3){0, 0, 0.2f}, 0.1f, 0.1f, 0.1f, BLACK); // tip
+        rlPopMatrix();
+
+        rlPopMatrix(); 
     }
 
-    // --- DRAW ADAS GOONER ---
-    float scale = 9.0f; // BOSS SIZE
-    float animWalk = isMoving ? sinf(walkTimer * speed * 30.0f) : 0.0f;
-    float animAttack = (attackTimer > 0) ? (1.0f - attackTimer / 1.5f) : 0.0f; // Slower cooldown logic mapped
-    
-    rlPushMatrix();
-    rlTranslatef(position.x, position.y, position.z);
-    rlRotatef(angle, 0, 1, 0);
-    rlScalef(scale, scale, scale);
-
-    Color skin = { 255, 180, 120, 255 }; // slightly paler
-    Color clothes = { 50, 50, 50, 255 }; // dark suit
-
-    // Legs
-    rlPushMatrix();
-    rlTranslatef(-0.2f, 0.4f, 0);
-    rlRotatef(animWalk * 35.0f, 1, 0, 0);
-    DrawCube((Vector3){0, 0, 0}, 0.25f, 0.8f, 0.25f, BLACK);
-    rlPopMatrix();
-
-    rlPushMatrix();
-    rlTranslatef(0.2f, 0.4f, 0);
-    rlRotatef(-animWalk * 35.0f, 1, 0, 0);
-    DrawCube((Vector3){0, 0, 0}, 0.25f, 0.8f, 0.25f, BLACK);
-    rlPopMatrix();
-
-    // Torso (Buffed)
-    rlPushMatrix();
-    DrawCube((Vector3){ 0, 1.25f, 0 }, 0.9f, 0.9f, 0.5f, clothes); 
-    DrawCube((Vector3){ 0, 1.75f, 0 }, 1.1f, 0.3f, 0.6f, clothes); // huge shoulders
-    rlPopMatrix();
-
-    // Arms
-    rlPushMatrix();
-    rlTranslatef(-0.55f, 1.5f, 0);
-    rlRotatef(-animWalk * 45.0f, 1, 0, 0);
-    DrawCube((Vector3){0, -0.35f, 0}, 0.25f, 0.8f, 0.25f, skin);
-    rlPopMatrix();
-
-    rlPushMatrix();
-    rlTranslatef(0.55f, 1.5f, 0);
-    if (animAttack > 0) rlRotatef(animAttack * -130.0f, 1, 0, 0);
-    else rlRotatef(animWalk * 45.0f, 1, 0, 0);
-    DrawCube((Vector3){0, -0.35f, 0}, 0.25f, 0.8f, 0.25f, skin);
-
-    // Giant Katana
-    rlPushMatrix();
-    rlTranslatef(0, -0.35f, 0.2f);
-    rlRotatef(90, 1, 0, 0);
-    DrawCube((Vector3){0, 1.2f, 0}, 0.1f, 2.8f, 0.1f, LIGHTGRAY);
-    DrawCube((Vector3){0, -0.1f, 0}, 0.2f, 0.4f, 0.2f, DARKPURPLE); // evil sword hilt
-    rlPopMatrix();
-    rlPopMatrix();
-
-    // Head
-    rlPushMatrix();
-    rlTranslatef(0, 2.1f, 0);
-    DrawCube((Vector3){0, 0, 0}, 0.5f, 0.5f, 0.5f, skin);
-    DrawCube((Vector3){-0.15f, 0.1f, 0.25f}, 0.1f, 0.1f, 0.1f, RED); // Red glowing glowing eyes
-    DrawCube((Vector3){0.15f, 0.1f, 0.25f}, 0.1f, 0.1f, 0.1f, RED);
-    
-    // Huge Crown
-    DrawCube((Vector3){0, 0.4f, 0}, 0.6f, 0.8f, 0.6f, GOLD); 
-    rlPopMatrix();
-
-    rlPopMatrix(); 
+    // --- DRAW WHITE LASER BEAM ---
+    if (laserCharging || laserFiring) {
+        Vector3 laserOrigin = position;
+        
+        // Set laser origin to the crotch (member) position based on the active model
+        if (globalUseWafelModel && wafelModelLoaded) {
+            laserOrigin.y += 3.8f; // Crotch height for 3D Wafel Model
+            float facingRad = angle * DEG2RAD;
+            laserOrigin.x += sinf(facingRad) * 1.5f; // Forward offset for Wafel model
+            laserOrigin.z += cosf(facingRad) * 1.5f;
+        } else {
+            laserOrigin.y += 0.8f * 9.0f; // Crotch height in world space for blocky model
+            float facingRad = angle * DEG2RAD;
+            laserOrigin.x += sinf(facingRad) * 3.6f; // Forward offset for blocky model (0.4 * 9.0)
+            laserOrigin.z += cosf(facingRad) * 3.6f;
+        }
+        
+        if (laserCharging) {
+            // Charge-up glow - big pulsing white ball at crotch
+            float chargeProgress = laserChargeTimer / 1.5f;
+            float pulse = sinf(laserChargeTimer * 12.0f) * 0.4f + 0.6f;
+            float glowRadius = 1.5f + chargeProgress * 4.0f;
+            
+            DrawSphere(laserOrigin, glowRadius * pulse, WHITE);
+            DrawSphere(laserOrigin, glowRadius * pulse * 1.4f, (Color){255, 255, 255, 150});
+            
+            // Orbiting particles
+            for (int i = 0; i < 5; i++) {
+                float orbitAngle = (laserChargeTimer * 6.0f + i * 1.256f);
+                Vector3 particlePos = laserOrigin;
+                particlePos.x += cosf(orbitAngle) * glowRadius * 2.0f;
+                particlePos.y += sinf(orbitAngle * 1.3f) * glowRadius * 1.5f;
+                particlePos.z += sinf(orbitAngle) * glowRadius * 2.0f;
+                DrawSphere(particlePos, 0.8f + chargeProgress * 1.2f, WHITE);
+            }
+        }
+        
+        if (laserFiring) {
+            Vector3 beamDir = Vector3Subtract(laserTargetPos, laserOrigin);
+            float beamLen = Vector3Length(beamDir);
+            
+            if (beamLen > 0.1f) {
+                Vector3 stepDir = Vector3Normalize(beamDir);
+                float thickness = 0.6f;
+                
+                // Rysujemy gęsto ułożone sześciany wzdłuż całej linii - to w 100% gwarantuje,
+                // że wiązka będzie widoczna jako gruby prostokąt i żadne błędy kamery jej nie ukryją.
+                int numSteps = (int)(beamLen / 0.3f); // Sześcian co 0.3 jednostki
+                for (int i = 0; i <= numSteps; i++) {
+                    Vector3 pos = {
+                        laserOrigin.x + stepDir.x * (i * 0.3f),
+                        laserOrigin.y + stepDir.y * (i * 0.3f),
+                        laserOrigin.z + stepDir.z * (i * 0.3f)
+                    };
+                    DrawCube(pos, thickness, thickness, thickness, WHITE);
+                }
+                
+                // Extra duży blok na końcu, żeby było wyraźnie widać miejsce uderzenia w gracza
+                DrawCube(laserTargetPos, 1.2f, 1.2f, 1.2f, RED);
+                DrawCube(laserOrigin, 1.2f, 1.2f, 1.2f, WHITE);
+            }
+        }
+    }
 }
 
 BoundingBox AdasGooner::GetBoundingBox() {

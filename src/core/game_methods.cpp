@@ -819,6 +819,16 @@ void Game::UpdateNetworkAndEnemies() {
                   adas->cutsceneTimer = e.walkTimer;
                   adas->isMoving = e.isMoving;
                   adas->angle = e.angle;
+                  
+                  adas->laserTargetPos = e.specialPos;
+                  if (e.specialActive == 1) {
+                      adas->laserCharging = true;
+                      adas->laserChargeTimer = e.specialTimer;
+                  } else if (e.specialActive == 2) {
+                      adas->laserFiring = true;
+                      adas->laserFireTimer = e.specialTimer;
+                  }
+                  
                   temp = adas;
               } else if (e.type == (int)EnemyType::GIBON_BOSS) {
                   auto gibon = std::make_shared<GibonRzygacz>(e.pos, e.id);
@@ -897,6 +907,18 @@ void Game::UpdateNetworkAndEnemies() {
                   auto adas = std::make_shared<AdasGooner>(e.pos, e.id);
                   adas->cutsceneState = (CutsceneState)(int)e.attackTimer;
                   adas->cutsceneTimer = e.walkTimer;
+                  adas->isMoving = e.isMoving;
+                  adas->angle = e.angle;
+                  
+                  adas->laserTargetPos = e.specialPos;
+                  if (e.specialActive == 1) {
+                      adas->laserCharging = true;
+                      adas->laserChargeTimer = e.specialTimer;
+                  } else if (e.specialActive == 2) {
+                      adas->laserFiring = true;
+                      adas->laserFireTimer = e.specialTimer;
+                  }
+                  
                   temp = adas;
               } else if (e.type == (int)EnemyType::GIBON_BOSS) {
                   auto gibon = std::make_shared<GibonRzygacz>(e.pos, e.id);

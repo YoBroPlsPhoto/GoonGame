@@ -21,6 +21,7 @@ public:
     
     bool shouldStartHost = false;
     bool shouldStartJoin = false;
+    bool shouldExit = false;
     bool shouldToggleFullscreen = false;
     bool shouldTestRelay = false;
     float relayPingMs = -1.0f;

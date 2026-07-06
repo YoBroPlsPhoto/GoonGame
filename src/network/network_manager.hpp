@@ -56,6 +56,10 @@ struct EnemySync {
     bool isMoving;
     float walkTimer;
     float attackTimer;
+    Vector3 specialPos;
+    int specialHp;
+    float specialTimer;
+    int specialActive;
 };
 
 class NetworkManager {
