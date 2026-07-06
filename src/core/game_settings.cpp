@@ -234,6 +234,19 @@ void Game::ApplySettings() {
             primeIdx = ((char)charPressed == primeCheat[0]) ? 1 : 0;
           }
 
+          if ((char)charPressed == lucaCheat[lucaIdx]) {
+            lucaIdx++;
+            if (lucaIdx == 4) {
+              currentWave = 35;
+              enemies.clear();
+              enemiesSpawnedSinceStartOfWave = 0;
+              waveActive = true;
+              lucaIdx = 0;
+            }
+          } else {
+            lucaIdx = ((char)charPressed == lucaCheat[0]) ? 1 : 0;
+          }
+
           charPressed = GetCharPressed();
         }
 

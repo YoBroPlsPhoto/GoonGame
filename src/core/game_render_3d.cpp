@@ -447,6 +447,23 @@ void Game::Render3D() {
           prime->isMoving = e.isMoving;
           prime->wardrobePos = e.pos;
           temp = prime;
+        } else if (e.type == (int)EnemyType::LUCA_BOSS) {
+          auto luca = std::make_shared<LucaBoss>(e.pos, e.id);
+          luca->position = e.pos;
+          luca->portalTimer = e.walkTimer;
+          luca->portalPos = e.pos;
+          luca->portalPos.y = 0.0f;
+          if (e.walkTimer < 2.6f) {
+            luca->portalPos.z = e.pos.z + 12.0f;
+          } else if (e.walkTimer < 5.4f) {
+            float t = (e.walkTimer - 2.6f) / 2.8f;
+            luca->portalPos.z = e.pos.z + 12.0f - t * 15.0f;
+          }
+          luca->angle = e.angle;
+          luca->isMoving = e.isMoving;
+          luca->walkTimer = e.isMoving ? e.walkTimer : 0.0f;
+          luca->attackTimer = e.attackTimer;
+          temp = luca;
         } else {
           temp = std::make_shared<Enemy>(e.pos, (EnemyType)e.type,
                                          (WeaponType)e.weapon, e.id);

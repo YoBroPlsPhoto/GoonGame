@@ -28,6 +28,8 @@ Game::Game()
   strcpy(gangCheat, "gangbang");
   primeIdx = 0;
   strcpy(primeCheat, "prime");
+  lucaIdx = 0;
+  strcpy(lucaCheat, "luca");
   vehicleCamOrbitH = 0.0f;
   vehicleCamOrbitV = 0.3f;
   firingStickyTimer = 0.0f;
@@ -104,6 +106,11 @@ void Game::Init() {
 
 void Game::Run() {
   while (!shouldExit && !WindowShouldClose()) {
+    if (menu.shouldExit) {
+      shouldExit = true;
+      break;
+    }
+
     // F12 toggles editor from any state
     if (IsKeyPressed(KEY_F12)) {
       if (state == GameState::EDITOR) {
@@ -157,9 +164,27 @@ void Game::Run() {
       HandleInput();
       UpdateNetworkAndEnemies();
       Render();
+      if (menu.shouldExit) {
+        shouldExit = true;
+      }
     }
   }
 
+  if (net.mode != NetworkManager::Mode::NONE) {
+    net.SendDisconnect(localPlayer.playerId);
+  }
+
+  if (goonMusicPlaying) {
+    StopMusicStream(goonMusic);
+    goonMusicPlaying = false;
+  }
+  if (gibonMusicPlaying) {
+    StopMusicStream(gibonMusic);
+    gibonMusicPlaying = false;
+  }
+
+  UnloadMusicStream(goonMusic);
+  UnloadMusicStream(gibonMusic);
   UnloadRenderTexture(reflectionTarget);
   UnloadRenderTexture(shadowTarget);
   UnloadRenderTexture(worldTarget);

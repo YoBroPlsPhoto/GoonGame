@@ -122,6 +122,19 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
             primeIdx = ((char)charPressed == primeCheat[0]) ? 1 : 0;
           }
 
+          if ((char)charPressed == lucaCheat[lucaIdx]) {
+            lucaIdx++;
+            if (lucaIdx == 4) {
+              currentWave = 35;
+              enemies.clear();
+              enemiesSpawnedSinceStartOfWave = 0;
+              waveActive = true;
+              lucaIdx = 0;
+            }
+          } else {
+            lucaIdx = ((char)charPressed == lucaCheat[0]) ? 1 : 0;
+          }
+
           charPressed = GetCharPressed();
         }
 
@@ -393,6 +406,8 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                     reward = 1000;
                   else if (hitEnemy->type == EnemyType::BOSS)
                     reward = 2000;
+                  else if (hitEnemy->type == EnemyType::LUCA_BOSS)
+                    reward = 5000;
                   localPlayer.AddMoney(reward);
                 }
               }

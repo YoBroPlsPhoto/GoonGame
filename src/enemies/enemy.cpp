@@ -45,6 +45,8 @@ Enemy::Enemy(Vector3 startPos, EnemyType t, WeaponType w, int enemyId) {
         speed = 0.05f; hp = 100000; color = {80, 200, 50, 255}; attackCooldown = 1.5f;
     } else if (type == EnemyType::GANG_BOSS) {
         speed = 0.12f; hp = 125000; color = {50, 50, 50, 255}; attackCooldown = 1.8f;
+    } else if (type == EnemyType::LUCA_BOSS) {
+        speed = 0.11f; hp = 90000; color = {150, 0, 24, 255}; attackCooldown = 1.6f;
     }
     maxHp = hp;
 
@@ -59,7 +61,7 @@ Enemy::Enemy(Vector3 startPos, EnemyType t, WeaponType w, int enemyId) {
 
 void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector3 basePos) {
     if (!active) return;
-    if (hp <= 0 && type != EnemyType::BOSS && type != EnemyType::GANG_BOSS && type != EnemyType::ADAS_PRIME && type != EnemyType::GIBON_BOSS) { active = false; return; }
+    if (hp <= 0 && type != EnemyType::BOSS && type != EnemyType::GANG_BOSS && type != EnemyType::ADAS_PRIME && type != EnemyType::GIBON_BOSS && type != EnemyType::LUCA_BOSS) { active = false; return; }
 
     if (tankCrushCooldown > 0) {
         tankCrushCooldown -= GetFrameTime();
@@ -93,7 +95,8 @@ void Enemy::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector
     // But they still TARGET players with attacks when nearby
     Vector3 moveTarget = targetPos;
     bool bossMovesToBase = (type == EnemyType::BOSS || type == EnemyType::GIBON_BOSS || 
-                            type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME);
+                            type == EnemyType::GANG_BOSS || type == EnemyType::ADAS_PRIME ||
+                            type == EnemyType::LUCA_BOSS);
     if (bossMovesToBase) {
         moveTarget = basePos; // Always move towards base
     }

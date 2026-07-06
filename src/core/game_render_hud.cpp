@@ -21,7 +21,8 @@ void Game::RenderHUD() {
         for (auto &e : enemies) {
             if (e->type != EnemyType::BOSS && e->type != EnemyType::GIBON_BOSS &&
                 e->type != EnemyType::GANG_BOSS &&
-                e->type != EnemyType::ADAS_PRIME) {
+                e->type != EnemyType::ADAS_PRIME &&
+                e->type != EnemyType::LUCA_BOSS) {
                 e->DrawHUD(activeCam);
             }
         }
@@ -43,6 +44,15 @@ void Game::RenderHUD() {
                 gang->cutsceneState = (GangCutscene)(int)e.attackTimer;
                 gang->stateTimer = e.walkTimer;
                 temp = gang;
+            } else if (e.type == (int)EnemyType::LUCA_BOSS) {
+                auto luca = std::make_shared<LucaBoss>(e.pos, e.id);
+                luca->position = e.pos;
+                luca->portalTimer = e.walkTimer;
+                luca->angle = e.angle;
+                luca->isMoving = e.isMoving;
+                luca->walkTimer = e.isMoving ? e.walkTimer : 0.0f;
+                luca->attackTimer = e.attackTimer;
+                temp = luca;
             } else {
                 temp = std::make_shared<Enemy>(e.pos, (EnemyType)e.type,
                                                (WeaponType)e.weapon, e.id);
@@ -57,7 +67,8 @@ void Game::RenderHUD() {
             if (temp->type != EnemyType::BOSS &&
                 temp->type != EnemyType::GIBON_BOSS &&
                 temp->type != EnemyType::GANG_BOSS &&
-                temp->type != EnemyType::ADAS_PRIME) {
+                temp->type != EnemyType::ADAS_PRIME &&
+                temp->type != EnemyType::LUCA_BOSS) {
                 temp->DrawHUD(activeCam);
             }
         }
@@ -190,7 +201,8 @@ void Game::RenderHUD() {
             for (auto &e : enemies) {
                 if (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS ||
                     e->type == EnemyType::GANG_BOSS ||
-                    e->type == EnemyType::ADAS_PRIME) {
+                    e->type == EnemyType::ADAS_PRIME ||
+                    e->type == EnemyType::LUCA_BOSS) {
                     activeBossLocal = e;
                     break;
                 }
@@ -200,7 +212,8 @@ void Game::RenderHUD() {
                 if (e.type == (int)EnemyType::BOSS ||
                     e.type == (int)EnemyType::GIBON_BOSS ||
                     e.type == (int)EnemyType::GANG_BOSS ||
-                    e.type == (int)EnemyType::ADAS_PRIME) {
+                    e.type == (int)EnemyType::ADAS_PRIME ||
+                    e.type == (int)EnemyType::LUCA_BOSS) {
                     activeBossLocal = std::make_shared<Enemy>(e.pos, (EnemyType)e.type,
                                                              WeaponType::KATANA, e.id);
                     activeBossLocal->hp = e.hp;
@@ -220,6 +233,8 @@ void Game::RenderHUD() {
                 bossName = "THE GANG";
             else if (activeBossLocal->type == EnemyType::ADAS_PRIME)
                 bossName = "ADAS PRIME";
+            else if (activeBossLocal->type == EnemyType::LUCA_BOSS)
+                bossName = "GOON LORD-LUCA";
 
             float bossRatio = (float)activeBossLocal->hp / (float)activeBossLocal->maxHp;
             int bw = 440;

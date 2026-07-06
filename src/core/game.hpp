@@ -3,6 +3,7 @@
 #include "bosses/adas_prime.hpp"
 #include "bosses/gang_boss.hpp"
 #include "bosses/gibon_rzygacz.hpp"
+#include "bosses/luca_boss.hpp"
 #include "editor/editor.hpp"
 #include "effects/particle_system.hpp"
 #include "enemies/enemy.hpp"
@@ -111,6 +112,8 @@ private:
   char gangCheat[9];
   int primeIdx;
   char primeCheat[6];
+  int lucaIdx;
+  char lucaCheat[5];
 
   float vehicleCamOrbitH;
   float vehicleCamOrbitV;

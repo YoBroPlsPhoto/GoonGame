@@ -4,6 +4,15 @@
 
 enum class GibonState { FALLING, IMPACT, CRATER_PAUSE, ROLLING, FINISHED_FALLING };
 
+enum class VomitOrbState {
+    INACTIVE,        // Kula nie istnieje
+    CHARGING,        // Gibon laduje kule
+    READY,           // Kula naladowana, czeka na zniszczenie lub koniec timera
+    DESTROYED,       // Kula zniszczona - animacja wybuchu
+    FLYING,          // Kula leci do bazy
+    EXPLODED_BASE    // Kula wybuchla przy bazie
+};
+
 struct ToxicVomit {
     Vector3 position;
     Vector3 velocity;
@@ -24,6 +33,8 @@ public:
     void Draw() override;
     void DrawHUD(Camera3D camera) override;
     BoundingBox GetBoundingBox() override;
+    bool RayHit(Ray ray, float& outDist) override;
+    void TakeDamage(int damage) override;
     
     GibonState gibonState;
     float stateTimer;
@@ -35,6 +46,26 @@ public:
     // Toxic vomit rain attack
     std::vector<ToxicVomit> vomitProjectiles;
     float vomitCooldown;
+
+    // Charged vomit orb attack below half HP
+    bool vomitOrbTriggered;
+    bool lastRayHitVomitOrb;
+    int vomitOrbHp;
+    int vomitOrbMaxHp;
+    Vector3 vomitOrbPosition;
+    
+    // Vomit orb state machine
+    VomitOrbState vomitOrbState;
+    float vomitOrbChargeProgress;    // 0-1 charging progress
+    float vomitOrbChargeTime;        // Total charge duration (5s)
+    float vomitOrbReadyTimer;        // Countdown while READY (25s)
+    float vomitOrbExplosionTimer;    // Timer for explosion animation
+    float vomitOrbFlyTimer;          // Time spent flying
+    Vector3 vomitOrbStartPos;        // Start position for flight arc
+    Vector3 vomitOrbTargetPos;       // Target position (base)
+    Vector3 vomitOrbVelocity;        // Current velocity during flight
+    float vomitOrbGibonExpTimer;     // Timer for explosion at gibon
+    bool vomitOrbGibonExploding;     // Is gibon-side explosion active
     
     // FPS stutter effect
     float stutterTimer;

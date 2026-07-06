@@ -5,7 +5,7 @@
 #include <vector>
 #include "../player/player.hpp"
 
-enum class EnemyType { MELEE, SHOOTER, FAST, TANK, BOSS, MINION, ELITE, GIGA_TANK, KAMIKAZE, GIBON_BOSS, GANG_BOSS, ADAS_PRIME };
+enum class EnemyType { MELEE, SHOOTER, FAST, TANK, BOSS, MINION, ELITE, GIGA_TANK, KAMIKAZE, GIBON_BOSS, GANG_BOSS, ADAS_PRIME, LUCA_BOSS };
 enum class WeaponType { KATANA, MACHETE, PISTOL, SHOTGUN, EXPLOSIVE };
 
 struct TargetInfo {

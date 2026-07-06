@@ -122,6 +122,19 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
             primeIdx = ((char)charPressed == primeCheat[0]) ? 1 : 0;
           }
 
+          if ((char)charPressed == lucaCheat[lucaIdx]) {
+            lucaIdx++;
+            if (lucaIdx == 4) {
+              currentWave = 35;
+              enemies.clear();
+              enemiesSpawnedSinceStartOfWave = 0;
+              waveActive = true;
+              lucaIdx = 0;
+            }
+          } else {
+            lucaIdx = ((char)charPressed == lucaCheat[0]) ? 1 : 0;
+          }
+
           charPressed = GetCharPressed();
         }
 
@@ -392,6 +405,8 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                     reward = 1000;
                   else if (hitEnemy->type == EnemyType::BOSS)
                     reward = 2000;
+                  else if (hitEnemy->type == EnemyType::LUCA_BOSS)
+                    reward = 5000;
                   localPlayer.AddMoney(reward);
                 }
               }
@@ -566,7 +581,8 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
         if (state == GameState::GAME || state == GameState::PAUSED) {
           int enemyIdCounter = 0;
           int totalEnemiesThisWave = 5 + currentWave * 4;
-          if (currentWave == 10 || currentWave == 20 || currentWave == 30)
+          if (currentWave == 10 || currentWave == 20 || currentWave == 30 ||
+              currentWave == 35)
             totalEnemiesThisWave = 1;
           if (currentWave == 40)
             totalEnemiesThisWave = 15; // 1 boss + 14 guards
@@ -596,6 +612,12 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   guard->hp *= 2.0f;
                   guard->maxHp = guard->hp;
                   enemies.push_back(guard);
+                }
+              } else if (currentWave == 35) {
+                if (enemiesSpawnedSinceStartOfWave == 0) {
+                  Vector3 lucaSpawn = {0.0f, 0.1f, -400.0f};
+                  enemies.push_back(
+                      std::make_shared<LucaBoss>(lucaSpawn, ++enemyIdCounter));
                 }
               } else if (currentWave == 30) {
                 if (enemiesSpawnedSinceStartOfWave == 0) {
@@ -965,7 +987,8 @@ if (state == GameState::GAME || state == GameState::LOBBY ||
                   continue;
                 if (CheckCollisionBoxes(tankBox, e->GetBoundingBox())) {
                   bool isBoss = (e->type == EnemyType::BOSS || e->type == EnemyType::GIBON_BOSS || 
-                                 e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME);
+                                 e->type == EnemyType::GANG_BOSS || e->type == EnemyType::ADAS_PRIME ||
+                                 e->type == EnemyType::LUCA_BOSS);
                   
                   float currentSpeedVal = fabsf(tank->speed);
                   float threshold = isBoss ? 0.76f : 0.40f; 
