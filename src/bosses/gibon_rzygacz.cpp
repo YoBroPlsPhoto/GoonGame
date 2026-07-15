@@ -73,7 +73,14 @@ GibonRzygacz::GibonRzygacz(Vector3 landingPos, int enemyId)
     pulseTimer = 0.0f;
     bodyScale = 8.0f;
     toxicColor = {80, 200, 50, 255};
+    
+    jumpState = GibonJumpState::NONE;
+    jumpAttackCooldown = 15.0f;
+    jumpAttackTimer = 0.0f;
+    jumpStartPos = {0, 0, 0};
+    jumpTargetPos = {0, 0, 0};
 }
+
 
 void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector3 basePos) {
     if (!active) return;
@@ -181,8 +188,10 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         bool orbForcesStop = (vomitOrbState == VomitOrbState::CHARGING || 
                               vomitOrbState == VomitOrbState::READY);
         
+        bool isJumpAttacking = (jumpState != GibonJumpState::NONE);
+
         isMoving = false;
-        if (distToBaseEdge > stopDist && !orbForcesStop) {
+        if (distToBaseEdge > stopDist && !orbForcesStop && !isJumpAttacking) {
             isMoving = true;
             Vector3 moveDir = Vector3Normalize(moveDirection);
             angle = atan2f(moveDir.x, moveDir.z) * RAD2DEG;
@@ -196,7 +205,7 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         } else {
             rollSpeed *= 0.95f;
             // Face nearest player when stopped at base
-            if (foundPlayer) {
+            if (foundPlayer && !isJumpAttacking) {
                 Vector3 faceDir = Vector3Subtract(attackTargetPos, position);
                 faceDir.y = 0;
                 angle = atan2f(faceDir.x, faceDir.z) * RAD2DEG;
@@ -205,6 +214,57 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         
         if (isMoving) walkTimer += dt;
         else walkTimer = 0;
+
+        // --- JUMP ATTACK LOGIC ---
+        if (jumpState == GibonJumpState::NONE) {
+            jumpAttackCooldown -= dt;
+            if (jumpAttackCooldown <= 0.0f && !orbForcesStop) {
+                jumpState = GibonJumpState::WINDUP;
+                jumpAttackTimer = 0.0f;
+                jumpAttackCooldown = 12.0f + (float)(rand() % 8); // 12-20s cooldown
+                jumpTargetPos = position; // Jump in place
+                jumpStartPos = position;
+            }
+        } else if (jumpState == GibonJumpState::WINDUP) {
+            jumpAttackTimer += dt;
+            isMoving = false;
+            rollSpeed = 0.0f;
+            if (jumpAttackTimer >= 1.0f) {
+                jumpState = GibonJumpState::AIR;
+                jumpAttackTimer = 0.0f;
+            }
+        } else if (jumpState == GibonJumpState::AIR) {
+            jumpAttackTimer += dt;
+            float flightTime = 3.0f; // Slower jump
+            float t = jumpAttackTimer / flightTime;
+            if (t >= 1.0f) {
+                t = 1.0f;
+                jumpState = GibonJumpState::IMPACT;
+                jumpAttackTimer = 0.0f;
+                position.y = 0.5f;
+                
+                // CREATE SHOCKWAVE
+                for (const auto& p : players) {
+                    if (!p.active || (p.hp && *p.hp <= 0)) continue;
+                    float d = Vector3Distance(p.pos, position);
+                    if (d < 45.0f && p.hp) {
+                        *p.hp -= 250; // Big shockwave damage
+                    }
+                }
+            } else {
+                float arcH = 200.0f; // Higher jump
+                float arc = 4.0f * arcH * t * (1.0f - t);
+                position.y = 0.5f + arc;
+            }
+        } else if (jumpState == GibonJumpState::IMPACT) {
+            jumpAttackTimer += dt;
+            isMoving = false;
+            rollSpeed = 0.0f;
+            if (jumpAttackTimer >= 3.0f) {
+                jumpState = GibonJumpState::NONE;
+                jumpAttackTimer = 0.0f;
+            }
+        }
 
         // --- VOMIT ORB TRIGGER ---
         if (!vomitOrbTriggered && hp <= maxHp / 2) {
@@ -348,21 +408,34 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         if (vomitCooldown <= 0) {
             vomitCooldown = 2.5f; // Every 2.5 seconds
             
-            // Vomit targets area around the nearest player
-            Vector3 vomitTarget = foundPlayer ? attackTargetPos : basePos;
-            
-            // Spawn a barrage of toxic vomit projectiles that rain down
-            for (int i = 0; i < 12; i++) {
-                ToxicVomit v;
-                Vector3 target = vomitTarget;
-                target.x += (float)(rand() % 60 - 30);
-                target.z += (float)(rand() % 60 - 30);
+            // Spawn vomit projectiles strictly at players outside the base
+            for (const auto& player : players) {
+                if (!player.active || (player.hp && *player.hp <= 0)) continue;
+                if (player.isStructure) continue;
                 
-                v.position = {target.x + (float)(rand() % 10 - 5), 80.0f + (float)(rand() % 40), target.z + (float)(rand() % 10 - 5)};
-                v.velocity = {0, -25.0f - (float)(rand() % 15), 0};
-                v.lifetime = 5.0f;
-                v.active = true;
-                vomitProjectiles.push_back(v);
+                // Do not target players inside the base
+                if (IsInsideBaseFootprint(player.pos, basePos)) continue;
+                
+                // Drop 3-4 balls around the player
+                int ballsPerPlayer = 3 + (rand() % 2);
+                for (int i = 0; i < ballsPerPlayer; i++) {
+                    Vector3 target = player.pos;
+                    target.x += (float)(rand() % 16 - 8); // Random spread around player
+                    target.z += (float)(rand() % 16 - 8);
+                    
+                    // Clamp out of base strictly
+                    if (IsInsideBaseFootprint(target, basePos)) {
+                        if (target.x > basePos.x) target.x = basePos.x + BASE_HALF_SIZE + 2.0f;
+                        else target.x = basePos.x - BASE_HALF_SIZE - 2.0f;
+                    }
+                    
+                    ToxicVomit v;
+                    v.position = {target.x + (float)(rand() % 4 - 2), 80.0f + (float)(rand() % 20), target.z + (float)(rand() % 4 - 2)};
+                    v.velocity = {0, -25.0f - (float)(rand() % 15), 0};
+                    v.lifetime = 5.0f;
+                    v.active = true;
+                    vomitProjectiles.push_back(v);
+                }
             }
         }
         
@@ -395,6 +468,17 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         if (v.position.y <= 0.5f || v.lifetime <= 0) {
             v.active = false;
             
+            // Spawn toxic puddle on impact
+            if (v.position.y <= 0.5f && !IsInsideBaseFootprint(v.position, basePos)) {
+                VomitPuddle puddle;
+                puddle.position = {v.position.x, 0.1f, v.position.z};
+                puddle.radius = 6.0f;
+                puddle.lifetime = 10.0f; // Lasts 10 seconds
+                puddle.damageTimer = 0.0f;
+                puddle.active = true;
+                vomitPuddles.push_back(puddle);
+            }
+            
             // Damage players near impact
             for (const auto& p : players) {
                 if (!p.active || (p.hp && *p.hp <= 0)) continue;
@@ -423,6 +507,43 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         std::remove_if(vomitProjectiles.begin(), vomitProjectiles.end(), 
             [](const ToxicVomit& v) { return !v.active; }),
         vomitProjectiles.end()
+    );
+
+    // --- UPDATE VOMIT PUDDLES ---
+    for (auto& p : vomitPuddles) {
+        if (!p.active) continue;
+        p.lifetime -= dt;
+        p.damageTimer -= dt;
+        
+        if (p.lifetime <= 0) {
+            p.active = false;
+            continue;
+        }
+        
+        // Damage players standing in the puddle (every 0.5 seconds)
+        if (p.damageTimer <= 0) {
+            bool hitSomeone = false;
+            for (const auto& player : players) {
+                if (!player.active || (player.hp && *player.hp <= 0)) continue;
+                if (player.isStructure) continue;
+                
+                float d = Vector3Distance(player.pos, p.position);
+                if (d < p.radius && player.hp) {
+                    *player.hp -= 35; // tick damage
+                    hitSomeone = true;
+                }
+            }
+            if (hitSomeone) {
+                p.damageTimer = 0.5f;
+            }
+        }
+    }
+    
+    // Clean up inactive puddles
+    vomitPuddles.erase(
+        std::remove_if(vomitPuddles.begin(), vomitPuddles.end(), 
+            [](const VomitPuddle& p) { return !p.active; }),
+        vomitPuddles.end()
     );
 }
 
@@ -533,15 +654,67 @@ void GibonRzygacz::Draw() {
     
     rlPopMatrix();
     
-    // Impact shockwave during IMPACT state
-    if (gibonState == GibonState::IMPACT && stateTimer < 2.0f) {
-        float shockRadius = stateTimer * 40.0f;
-        float alpha = 1.0f - stateTimer / 2.0f;
-        DrawCircle3D({0, -currentScale * 0.5f + 0.1f, 0}, shockRadius, {1, 0, 0}, 90.0f, 
-                     Fade({200, 255, 50, 255}, alpha * 0.5f));
-    }
     
+
     rlPopMatrix();
+    
+    // Impact shockwave and rocks (drawn in WORLD SPACE, independent of boss rotation)
+    bool isSpawnImpact = (gibonState == GibonState::IMPACT && stateTimer < 3.0f);
+    bool isJumpImpact = (jumpState == GibonJumpState::IMPACT && jumpAttackTimer < 3.0f);
+    
+    if (isSpawnImpact || isJumpImpact) {
+        float t = isSpawnImpact ? stateTimer : jumpAttackTimer;
+        float maxRadius = 60.0f;
+        float shockRadius = (t < 0.3f) ? (t / 0.3f) * maxRadius : maxRadius;
+        
+        // Expanding wave - multiple layers for thickness
+        if (t < 1.0f) {
+            float waveAlpha = 1.0f - t;
+            // 3 rings to make it thick
+            DrawCircle3D({position.x, 0.1f, position.z}, shockRadius, {1, 0, 0}, 90.0f, 
+                         Fade({255, 100, 50, 255}, waveAlpha * 0.9f));
+            DrawCircle3D({position.x, 0.12f, position.z}, shockRadius * 0.9f, {1, 0, 0}, 90.0f, 
+                         Fade({255, 150, 50, 255}, waveAlpha * 0.7f));
+            DrawCircle3D({position.x, 0.15f, position.z}, shockRadius * 0.8f, {1, 0, 0}, 90.0f, 
+                         Fade({255, 200, 100, 255}, waveAlpha * 0.5f));
+        }
+
+        // Jagged rocks forming a crater at max radius
+        if (t > 0.15f) {
+            float rockT = t - 0.15f; 
+            float rockAlpha = (rockT > 2.0f) ? (1.0f - (rockT - 2.0f) / 0.85f) : 1.0f;
+            if (rockAlpha < 0) rockAlpha = 0;
+            
+            float rockYOffset = (rockT < 0.2f) ? (rockT / 0.2f) * 6.0f : 6.0f;
+            if (rockT > 2.0f) rockYOffset -= ((rockT - 2.0f) / 0.85f) * 6.0f;
+
+            for (int i = 0; i < 45; i++) {
+                float a = (float)i / 45.0f * PI * 2.0f;
+                float jitter = sinf(a * 10.0f); // pseudo-random deterministic jitter
+                float rockRadius = maxRadius + jitter * 2.0f;
+                
+                float cx = position.x + cosf(a) * rockRadius;
+                float cz = position.z + sinf(a) * rockRadius;
+                
+                rlPushMatrix();
+                rlTranslatef(cx, -4.0f + rockYOffset + jitter, cz); // Fixed to world ground Y
+                rlRotatef(a * RAD2DEG, 0, 1, 0); // Face outward
+                rlRotatef(-20.0f - jitter * 15.0f, 1, 0, 0); // Pitch up
+                rlRotatef(jitter * 40.0f, 0, 0, 1); // Roll
+                
+                // Bigger rocks
+                Vector3 size = {9.0f + jitter * 1.5f, 14.0f + jitter * 3.0f, 7.0f + jitter};
+                Color rCol = {60, 55, 50, (unsigned char)(255 * rockAlpha)};
+                Color rLine = {20, 15, 10, (unsigned char)(255 * rockAlpha)};
+                
+                DrawCube({0,0,0}, size.x, size.y, size.z, rCol);
+                if (rockAlpha > 0.1f) {
+                    DrawCubeWires({0,0,0}, size.x, size.y, size.z, rLine);
+                }
+                rlPopMatrix();
+            }
+        }
+    }
     
     // --- SHADOW ---
     if (gibonState == GibonState::FALLING) {
@@ -561,6 +734,82 @@ void GibonRzygacz::Draw() {
         // Trail
         DrawSphere({v.position.x, v.position.y + 1.5f, v.position.z}, 0.4f, Fade({150, 255, 50, 255}, 0.4f));
         DrawSphere({v.position.x, v.position.y + 3.0f, v.position.z}, 0.25f, Fade({150, 255, 50, 255}, 0.2f));
+    }
+
+    // --- TOXIC VOMIT PUDDLES ---
+    for (const auto& p : vomitPuddles) {
+        if (!p.active) continue;
+        float alpha = (p.lifetime < 2.0f) ? (p.lifetime / 2.0f) : 1.0f;
+        
+        // --- EXPLOSION EFFECT ON IMPACT ---
+        float timeSinceImpact = 10.0f - p.lifetime;
+        if (timeSinceImpact < 0.5f) {
+            float expProgress = timeSinceImpact / 0.5f;
+            float expRadius = 3.0f + expProgress * 12.0f; // Made much larger
+            float expAlpha = 1.0f - expProgress;
+            
+            // Toxic fireball explosion
+            DrawSphere(p.position, expRadius, Fade({150, 255, 50, 255}, expAlpha * 0.8f));
+            DrawSphere(p.position, expRadius * 0.7f, Fade({200, 255, 100, 255}, expAlpha * 0.9f));
+            
+            // Shockwave ring
+            DrawCircle3D({p.position.x, 0.2f, p.position.z}, expRadius * 1.5f, {1, 0, 0}, 90.0f, Fade({255, 255, 100, 255}, expAlpha * 0.6f));
+            
+            // Splashes (flying vomit chunks)
+            for(int i = 0; i < 12; i++) { // Increased number of chunks
+                float a = (float)i / 12.0f * PI * 2.0f;
+                float dist = expProgress * 16.0f; // Flying further
+                float height = sinf(expProgress * PI) * 6.0f; // Flying higher
+                Vector3 chunkPos = {p.position.x + cosf(a) * dist, 0.1f + height, p.position.z + sinf(a) * dist};
+                DrawSphere(chunkPos, 1.2f, Fade({100, 220, 30, 255}, expAlpha)); // Larger chunks
+            }
+        }
+
+        // Puddle decal (DrawCylinder)
+        float pulse = sinf(pulseTimer * 8.0f) * 0.08f + 0.92f;
+        float currentRadius = p.radius * pulse;
+        Color puddleColor = Fade({100, 220, 30, 255}, alpha * 0.8f);
+        Color coreColor = Fade({60, 150, 20, 255}, alpha * 0.9f);
+        
+        DrawCylinder({p.position.x, 0.08f, p.position.z}, currentRadius, currentRadius, 0.08f, 64, puddleColor);
+        DrawCylinder({p.position.x, 0.10f, p.position.z}, currentRadius * 0.55f, currentRadius * 0.55f, 0.08f, 64, coreColor);
+        
+        // Bubbles in the puddle
+        for (int i = 0; i < 5; i++) {
+            float ba = (float)i / 5.0f * PI * 2.0f + pulseTimer * 2.0f;
+            float br = p.radius * 0.5f * sinf(pulseTimer * 3.0f + i);
+            float bx = p.position.x + cosf(ba) * br;
+            float bz = p.position.z + sinf(ba) * br;
+            float bSize = 0.5f + sinf(pulseTimer * 5.0f + i) * 0.3f;
+            if (bSize > 0) {
+                DrawSphere({bx, 0.2f, bz}, bSize, Fade({150, 255, 50, 255}, alpha * 0.6f));
+            }
+        }
+    }
+
+    // --- ROLL ATTACK MISS EXPLOSION ---
+    if (rollMissExplosionTimer >= 0.0f && rollMissExplosionTimer < 0.6f) {
+        float t = rollMissExplosionTimer / 0.6f;
+        float expRadius = 3.0f + t * 15.0f;
+        float expAlpha = 1.0f - t;
+        Vector3 ep = rollMissExplosionPos;
+        
+        // Big shockwave sphere
+        DrawSphere({ep.x, ep.y + expRadius * 0.3f, ep.z}, expRadius, Fade({80, 200, 50, 255}, expAlpha * 0.8f));
+        DrawSphere({ep.x, ep.y + expRadius * 0.1f, ep.z}, expRadius * 0.7f, Fade({200, 255, 100, 255}, expAlpha * 0.9f));
+        
+        // Ground shockwave rings
+        DrawCircle3D({ep.x, 0.15f, ep.z}, expRadius * 1.4f, {1, 0, 0}, 90.0f, Fade({150, 255, 50, 255}, expAlpha * 0.7f));
+        DrawCircle3D({ep.x, 0.2f, ep.z}, expRadius * 1.1f, {1, 0, 0}, 90.0f, Fade({255, 255, 80, 255}, expAlpha * 0.5f));
+        
+        // Flying debris
+        for (int i = 0; i < 10; i++) {
+            float a = (float)i / 10.0f * PI * 2.0f;
+            float dist = t * 18.0f;
+            float height = sinf(t * PI) * 8.0f;
+            DrawSphere({ep.x + cosf(a) * dist, ep.y + height, ep.z + sinf(a) * dist},
+                       1.5f, Fade({80, 200, 30, 255}, expAlpha));
+        }
     }
 
     // ============================================
