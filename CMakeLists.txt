@@ -43,12 +43,17 @@ set(SOURCES
     src/bosses/adas_prime.cpp
     src/bosses/gang_boss.cpp
     src/bosses/gibon_rzygacz.cpp
+    src/bosses/luca_boss.cpp
     src/structures/structure.cpp
     src/core/game.cpp
     src/core/game_update.cpp
     src/core/game_input.cpp
     src/core/game_network.cpp
     src/core/game_render.cpp
+    src/editor/editor.cpp
+    src/editor/editor_gizmo.cpp
+    src/editor/editor_ui.cpp
+    src/network/lobby_server.cpp
 )
 
 # Detect platform paths

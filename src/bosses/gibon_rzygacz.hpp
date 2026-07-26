@@ -2,7 +2,7 @@
 #include "../enemies/enemy.hpp"
 #include <vector>
 
-enum class GibonState { FALLING, IMPACT, CRATER_PAUSE, ROLLING, FINISHED_FALLING };
+enum class GibonState { FALLING, IMPACT, CRATER_PAUSE, ROLLING, FINISHED_FALLING, JUMPING };
 
 enum class VomitOrbState {
     INACTIVE,        // Kula nie istnieje
@@ -42,6 +42,17 @@ public:
     float fallHeight;        // Current height during fall
     float rollAngle;         // Visual rotation while rolling
     float rollSpeed;         // Current rolling speed
+    
+    // Jump attack
+    float jumpCooldown;
+    Vector3 jumpStartPos;
+    
+    // Expanding shockwave attack
+    bool shockwaveActive;
+    Vector3 shockwavePos;
+    float shockwaveRadius;
+    float shockwaveMaxRadius;
+    float shockwaveSpeed;
     
     // Toxic vomit rain attack
     std::vector<ToxicVomit> vomitProjectiles;
