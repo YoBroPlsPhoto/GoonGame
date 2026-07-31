@@ -124,13 +124,17 @@ void Game::Render() {
       }
     }
 
-    // --- GIBON FPS STUTTER EFFECT ---
+    // --- GIBON FPS STUTTER & 5 FPS EFFECT ---
+    bool gibon5FpsActive = false;
     bool gibonStuttering = false;
     if (net.mode == NetworkManager::Mode::SERVER) {
       for (auto &e : enemies) {
         if (e->type == EnemyType::GIBON_BOSS) {
           auto gibon = std::dynamic_pointer_cast<GibonRzygacz>(e);
           if (gibon && gibon->active) {
+            if (gibon->fpsLagEffectTimer > 0.0f) {
+              gibon5FpsActive = true;
+            }
             if (gibon->isStuttering ||
                 gibon->gibonState == GibonState::FALLING ||
                 gibon->gibonState == GibonState::IMPACT) {
@@ -140,7 +144,12 @@ void Game::Render() {
         }
       }
     }
-    if (gibonStuttering) {
+    if (gibon5FpsActive) {
+      // Enforce 5 FPS (0.20s per frame)
+      double waitUntil = GetTime() + 0.195;
+      while (GetTime() < waitUntil) { /* spin */
+      }
+    } else if (gibonStuttering) {
       // Simulate FPS drop by burning CPU time
       double waitUntil = GetTime() + 0.04 + (double)(rand() % 60) / 1000.0;
       while (GetTime() < waitUntil) { /* spin */

@@ -25,6 +25,7 @@ set(SOURCES
     src/enemies/enemy.cpp
     src/hud/menu.cpp
     src/network/network_manager.cpp
+    src/network/lobby_server.cpp
     src/map/desert_map.cpp
     src/map/city_map.cpp
     src/weapons/glock.cpp
@@ -43,12 +44,16 @@ set(SOURCES
     src/bosses/adas_prime.cpp
     src/bosses/gang_boss.cpp
     src/bosses/gibon_rzygacz.cpp
+    src/bosses/luca_boss.cpp
     src/structures/structure.cpp
     src/core/game.cpp
     src/core/game_update.cpp
     src/core/game_input.cpp
     src/core/game_network.cpp
     src/core/game_render.cpp
+    src/editor/editor.cpp
+    src/editor/editor_gizmo.cpp
+    src/editor/editor_ui.cpp
 )
 
 # Detect platform paths
@@ -75,6 +80,8 @@ target_link_libraries(AdasServer PRIVATE ${RAYLIB_LIB} Threads::Threads)
 
 # Platform-specific setup (order matters!)
 if(WIN32)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0601)
+    target_compile_definitions(AdasServer PRIVATE _WIN32_WINNT=0x0601)
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 mswsock gdi32 winmm)
     target_link_libraries(AdasServer PRIVATE ws2_32 mswsock gdi32 winmm)
     # Static linking for standalone Windows executables
