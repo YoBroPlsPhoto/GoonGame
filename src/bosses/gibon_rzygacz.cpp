@@ -43,6 +43,17 @@ GibonRzygacz::GibonRzygacz(Vector3 landingPos, int enemyId)
     rollAngle = 0.0f;
     rollSpeed = 0.0f;
     
+    // Jump attack
+    jumpCooldown = 5.0f + (float)(rand() % 1000) / 100.0f; // 5 to 15 seconds
+    jumpStartPos = position;
+    
+    // Expanding shockwave attack
+    shockwaveActive = false;
+    shockwavePos = {0, 0, 0};
+    shockwaveRadius = 0.0f;
+    shockwaveMaxRadius = 60.0f;
+    shockwaveSpeed = 40.0f;
+    
     vomitCooldown = 0.0f;
     vomitOrbTriggered = false;
     lastRayHitVomitOrb = false;
@@ -170,6 +181,51 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
             stateTimer = 0.0f;
         }
         
+    } else if (gibonState == GibonState::JUMPING) {
+        // Parabolic jump towards landingTarget
+        float jumpTime = 1.5f; // Jump takes 1.5 seconds
+        float t = stateTimer / jumpTime;
+        
+        if (t >= 1.0f) {
+            // Landed
+            position.y = 0.5f;
+            position.x = landingTarget.x;
+            position.z = landingTarget.z;
+            
+            // Skip the cutscene pause (IMPACT), go straight back to combat!
+            gibonState = GibonState::FINISHED_FALLING;
+            stateTimer = 0.0f;
+            
+            craterCreated = true;
+            impactCrater.position = landingTarget;
+            impactCrater.position.y = 0.01f;
+            impactCrater.radius = 20.0f;
+            
+            // Trigger traveling shockwave instead of instant damage
+            shockwaveActive = true;
+            shockwavePos = landingTarget;
+            shockwavePos.y = 0.1f;
+            shockwaveRadius = 0.0f;
+            
+            isMoving = false;
+            walkTimer = 0;
+            rollSpeed = 0.0f;
+        } else {
+            // Lerp x/z
+            position.x = jumpStartPos.x + (landingTarget.x - jumpStartPos.x) * t;
+            position.z = jumpStartPos.z + (landingTarget.z - jumpStartPos.z) * t;
+            
+            // Parabola for y
+            float jumpHeight = 40.0f; // jump up 40 units
+            position.y = jumpStartPos.y + 4.0f * jumpHeight * t * (1.0f - t);
+            
+            // Spin mid-air
+            rollAngle += dt * 500.0f;
+            
+            isMoving = true;
+            walkTimer += dt;
+        }
+        
     } else if (gibonState == GibonState::FINISHED_FALLING) {
         // --- NORMAL COMBAT BEHAVIOR ---
         float timeScale = dt * 60.0f;
@@ -213,6 +269,24 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
         bool attackInProgress = isDirectVomiting || isJumpAttacking || orbAttackActive ||
                                 isCastingFpsLag || fpsLagEffectTimer > 0.0f;
 
+        // Check if orb is in a state that forces gibon to stand still
+        bool orbForcesStop = (vomitOrbState == VomitOrbState::CHARGING || 
+                              vomitOrbState == VomitOrbState::READY);
+        
+        // --- JUMP ATTACK TRIGGER ---
+        if (!orbForcesStop && foundPlayer) {
+            jumpCooldown -= dt;
+            if (jumpCooldown <= 0.0f) {
+                gibonState = GibonState::JUMPING;
+                stateTimer = 0.0f;
+                jumpStartPos = position;
+                landingTarget = attackTargetPos; // Jump to the nearest player
+                // Random time between 5 and 15 seconds (max 15s)
+                jumpCooldown = 5.0f + (float)(rand() % 1000) / 100.0f;
+                return; // Stop processing this frame to start jump immediately
+            }
+        }
+        
         isMoving = false;
         if (distToBaseEdge > stopDist && !attackInProgress) {
             isMoving = true;
@@ -732,6 +806,32 @@ void GibonRzygacz::Update(const std::vector<TargetInfo>& players, float* baseHp,
             [](const VomitPuddle& p) { return !p.active; }),
         vomitPuddles.end()
     );
+    
+    // --- UPDATE TRAVELING SHOCKWAVE ---
+    if (shockwaveActive) {
+        float prevRadius = shockwaveRadius;
+        shockwaveRadius += shockwaveSpeed * dt;
+        
+        // Damage players that the wave just passed over
+        for (const auto& p : players) {
+            if (!p.active || (p.hp && *p.hp <= 0)) continue;
+            if (p.isStructure) continue;
+            
+            float dist = Vector3Distance(p.pos, shockwavePos);
+            if (dist <= shockwaveRadius && dist > prevRadius) {
+                float damageRatio = 1.0f - (dist / shockwaveMaxRadius);
+                if (damageRatio < 0.0f) damageRatio = 0.0f;
+                int damage = (int)(400.0f * damageRatio); // Max 400 dmg, min 0
+                if (damage > 0 && p.hp) {
+                    *p.hp -= damage;
+                }
+            }
+        }
+        
+        if (shockwaveRadius >= shockwaveMaxRadius) {
+            shockwaveActive = false;
+        }
+    }
 }
 
 void GibonRzygacz::Draw() {
@@ -769,15 +869,25 @@ void GibonRzygacz::Draw() {
             DrawCubeWires({0, 1.0f, 0}, 4.0f + sinf(a * 5) * 2.0f, 2.0f, 3.0f, BLACK);
             rlPopMatrix();
             
-            // Cracks spreading outward on the road
+            // Cracks spreading outward on the road (deterministic, visible)
             if (i % 3 == 0) {
+                float crackVariation = (float)((i * 7) % 10);
                 Vector3 crackEnd = {
-                    impactCrater.position.x + cosf(a) * (impactCrater.radius * 2.5f + (float)(rand()%10)),
+                    impactCrater.position.x + cosf(a) * (impactCrater.radius * 2.5f + crackVariation),
                     0.07f,
-                    impactCrater.position.z + sinf(a) * (impactCrater.radius * 2.5f + (float)(rand()%10))
+                    impactCrater.position.z + sinf(a) * (impactCrater.radius * 2.5f + crackVariation)
                 };
                 Vector3 crackStart = {cx, 0.07f, cz};
+                // Make cracks thicker and visible
                 DrawLine3D(crackStart, crackEnd, BLACK);
+                
+                Vector3 offset1 = {crackStart.x + 0.15f, crackStart.y, crackStart.z + 0.15f};
+                Vector3 offsetEnd1 = {crackEnd.x + 0.15f, crackEnd.y, crackEnd.z + 0.15f};
+                DrawLine3D(offset1, offsetEnd1, BLACK);
+
+                Vector3 offset2 = {crackStart.x - 0.15f, crackStart.y, crackStart.z - 0.15f};
+                Vector3 offsetEnd2 = {crackEnd.x - 0.15f, crackEnd.y, crackEnd.z - 0.15f};
+                DrawLine3D(offset2, offsetEnd2, BLACK);
             }
         }
     }
@@ -953,6 +1063,37 @@ void GibonRzygacz::Draw() {
                 }
                 rlPopMatrix();
             }
+        }
+    }
+    
+    rlPopMatrix();
+    
+    // Impact shockwave and debris during IMPACT state (independent of gibon rotation)
+    if (gibonState == GibonState::IMPACT && stateTimer < 2.0f) {
+        float shockRadius = stateTimer * 40.0f;
+        float alpha = 1.0f - stateTimer / 2.0f;
+        DrawCircle3D({impactCrater.position.x, 0.1f, impactCrater.position.z}, shockRadius, {1, 0, 0}, 90.0f, 
+                     Fade({200, 255, 50, 255}, alpha * 0.5f));
+        
+        // Pebbles and debris (kamyczki i odłamki) from the ground
+        for (int i = 0; i < 30; i++) {
+            float a = (float)i / 30.0f * PI * 2.0f;
+            float speed = 20.0f + (float)((i * 17) % 20);
+            float dist = speed * stateTimer;
+            
+            float height = 5.0f + (float)((i * 11) % 8) + sinf(a * 3.0f) * 3.0f - stateTimer * stateTimer * 25.0f;
+            if (height < 0.1f) height = 0.1f;
+            
+            Vector3 debrisPos = {
+                impactCrater.position.x + cosf(a) * dist,
+                height,
+                impactCrater.position.z + sinf(a) * dist
+            };
+            
+            float dSize = 0.3f + (float)((i * 7) % 5) * 0.1f;
+            // Appearance depends on ground (gray rubble), not the boss
+            DrawCube(debrisPos, dSize, dSize, dSize, Fade({70, 70, 70, 255}, alpha));
+            DrawCubeWires(debrisPos, dSize, dSize, dSize, Fade(BLACK, alpha));
         }
     }
     
@@ -1375,6 +1516,33 @@ void GibonRzygacz::Draw() {
         };
         float pSize = 0.5f + sinf(pulseTimer * 3.0f + (float)i) * 0.3f;
         DrawSphere(particlePos, pSize, Fade({100, 255, 50, 255}, 0.3f));
+    }
+    
+    // --- TRAVELING SHOCKWAVE VISUALS ---
+    if (shockwaveActive) {
+        float alpha = 1.0f - (shockwaveRadius / shockwaveMaxRadius);
+        if (alpha < 0.0f) alpha = 0.0f;
+        
+        // Expanding rings
+        DrawCircle3D(shockwavePos, shockwaveRadius, {1, 0, 0}, 90.0f, Fade({200, 255, 50, 255}, alpha * 0.8f));
+        DrawCircle3D(shockwavePos, fmaxf(0.0f, shockwaveRadius - 3.0f), {1, 0, 0}, 90.0f, Fade({100, 200, 30, 255}, alpha * 0.4f));
+        
+        // Debris pushed by the wave edge
+        for (int i = 0; i < 32; i++) {
+            float a = (float)i / 32.0f * PI * 2.0f + shockwaveRadius * 0.05f; 
+            float height = sinf(a * 8.0f + shockwaveRadius * 0.5f) * 2.0f + 1.5f;
+            if (height < 0.1f) height = 0.1f;
+            
+            Vector3 debrisPos = {
+                shockwavePos.x + cosf(a) * shockwaveRadius,
+                height,
+                shockwavePos.z + sinf(a) * shockwaveRadius
+            };
+            
+            float dSize = 0.4f + (float)((i * 11) % 7) * 0.1f;
+            DrawCube(debrisPos, dSize, dSize, dSize, Fade({70, 70, 70, 255}, alpha));
+            DrawCubeWires(debrisPos, dSize, dSize, dSize, Fade(BLACK, alpha));
+        }
     }
 }
 
