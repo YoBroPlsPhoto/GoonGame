@@ -312,7 +312,6 @@ void Game::HandleInteraction() {
             Weapon *newWep = nullptr;
             bool buyAmmo = false;
             bool healing = false;
-
             if (shopLevel == 0) {           // TIER 1
               if (shopHit.point.z < bp.z) { // Left Column
                 if (offsetY > 4.8f) {       /* GLOCK: FREE (already have it) */

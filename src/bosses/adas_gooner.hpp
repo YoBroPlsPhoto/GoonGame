@@ -25,6 +25,11 @@ public:
     float shockwaveTimer = 0.0f;
     float summonTimer = 0.0f;
     bool isEnraged = false;
+    float smokeDamageTimer = 0.0f;
+    float smokePulseTimer = 0.0f;
+    float smokeCooldown = 15.0f;
+    float smokeActiveTimer = 0.0f;
+    bool isSprayingSmoke = false;
 
     // White laser special attack
     float laserCooldown = 20.0f;   // Time until next laser (starts after 20s)
@@ -33,4 +38,18 @@ public:
     bool laserFiring = false;      // Is the laser currently active
     bool laserCharging = false;    // Is the laser charging up
     Vector3 laserTargetPos = {0, 0, 0}; // Where the laser is aimed
+
+    // Explosive snus attack
+    struct SnusProjectile {
+        Vector3 position;
+        Vector3 velocity;
+        float radius;
+        float lifetime;
+        bool active;
+    };
+    std::vector<SnusProjectile> snusProjectiles;
+    float snusCooldown = 12.0f;
+    float snusShootTimer = 0.0f;
+    int snusShotsFired = 0;
+    bool isShootingSnus = false;
 };

@@ -324,8 +324,13 @@ void Game::UpdateNetworkAndEnemies() {
                 syncList.back().attackTimer = (float)(int)adas->cutsceneState;
                 syncList.back().walkTimer = adas->cutsceneTimer;
                 syncList.back().specialPos = adas->laserTargetPos;
-                syncList.back().specialActive = (adas->laserCharging ? 1 : (adas->laserFiring ? 2 : 0));
-                syncList.back().specialTimer = adas->laserCharging ? adas->laserChargeTimer : adas->laserFireTimer;
+                syncList.back().specialActive = adas->laserCharging ? 1 :
+                                                (adas->laserFiring ? 2 :
+                                                (adas->isSprayingSmoke ? 3 :
+                                                (adas->isShootingSnus ? 4 : 0)));
+                syncList.back().specialTimer = adas->laserCharging ? adas->laserChargeTimer :
+                                              (adas->laserFiring ? adas->laserFireTimer :
+                                              (adas->isSprayingSmoke ? adas->smokeActiveTimer : adas->snusShootTimer));
               }
             }
             // Override sync fields for Gibon boss (same pattern as AdasGooner)

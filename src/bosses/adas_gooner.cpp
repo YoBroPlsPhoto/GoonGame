@@ -7,6 +7,37 @@
 namespace {
 constexpr float BASE_HALF_SIZE = 25.0f;
 constexpr float BASE_EDGE_AGGRO_DISTANCE = 8.0f;
+constexpr float SMOKE_DURATION = 6.0f;
+constexpr float SMOKE_RADIUS = 54.0f;
+constexpr float SMOKE_DAMAGE_INTERVAL = 0.75f;
+constexpr int SMOKE_DAMAGE = 7;
+constexpr float LASER_MAX_RANGE = 80.0f;
+constexpr float LASER_NEAR_DAMAGE = 1.5f;
+constexpr float LASER_MID_DAMAGE = 0.8f;
+constexpr float LASER_FAR_DAMAGE = 0.35f;
+constexpr float SNUS_CHARGE_TIME = 0.9f;
+constexpr float SNUS_SPEED = 140.0f;
+constexpr float SNUS_EXPLOSION_RADIUS = 16.0f;
+constexpr int SNUS_DAMAGE = 50;
+constexpr float SNUS_EXPLOSION_LINGER = 0.60f;
+constexpr float SNUS_COOLDOWN_TIME = 30.0f;
+
+Vector3 GetSnusMouthPosition(const Vector3& bossPos, float angle, bool useWafelModel) {
+    float facingRad = angle * DEG2RAD;
+    if (useWafelModel) {
+        return {
+            bossPos.x + sinf(facingRad) * 0.95f,
+            bossPos.y + 4.65f,
+            bossPos.z + cosf(facingRad) * 0.95f
+        };
+    }
+
+    return {
+        bossPos.x + sinf(facingRad) * 1.15f,
+        bossPos.y + 20.2f,
+        bossPos.z + cosf(facingRad) * 1.15f
+    };
+}
 
 bool IsInsideBaseFootprint(Vector3 pos, Vector3 basePos) {
     return fabsf(pos.x - basePos.x) <= BASE_HALF_SIZE &&
@@ -52,6 +83,7 @@ AdasGooner::AdasGooner(Vector3 startPos, int enemyId)
     speed = 0.04f; // Extremely slow but threatening
     radius = 8.0f;
     color = {255, 100, 100, 255}; // Deep red
+    snusCooldown = 28.0f;
 }
 
 void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, Vector3 basePos) {
@@ -118,9 +150,100 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
         // Normal Behavior
         
         float dt = GetFrameTime();
+
+        // --- SMOKE CLOUD SPECIAL ATTACK ---
+        // The cloud is a persistent, close-range hazard.  It has its own
+        // cooldown so it does not replace the laser attack.
+        if (isSprayingSmoke) {
+            smokeActiveTimer += dt;
+            smokeDamageTimer += dt;
+            isMoving = false;
+
+            if (smokeDamageTimer >= SMOKE_DAMAGE_INTERVAL) {
+                smokeDamageTimer = 0.0f;
+                float cloudRadius = SMOKE_RADIUS * fminf(smokeActiveTimer / 1.25f, 1.0f);
+                for (const auto& p : players) {
+                    if (!p.active || (p.hp && *p.hp <= 0) || p.isStructure) continue;
+                    if (Vector3Distance(position, p.pos) <= cloudRadius && p.hp) {
+                        *p.hp -= SMOKE_DAMAGE;
+                    }
+                }
+            }
+
+            if (smokeActiveTimer >= SMOKE_DURATION) {
+                isSprayingSmoke = false;
+                smokeActiveTimer = 0.0f;
+                smokeDamageTimer = 0.0f;
+                smokeCooldown = 15.0f;
+            }
+        } else if (isShootingSnus) {
+            snusShootTimer += dt;
+            isMoving = false;
+
+            bool targetStillValid = false;
+            for (const auto& p : players) {
+                if (!p.active || (p.hp && *p.hp <= 0) || p.isStructure) continue;
+                if (Vector3Distance(p.pos, laserTargetPos) <= 3.5f) {
+                    targetStillValid = !IsInsideBaseFootprint(p.pos, basePos);
+                    break;
+                }
+            }
+
+            Vector3 mouthPos = GetSnusMouthPosition(position, angle, globalUseWafelModel && wafelModelLoaded);
+            if (snusShootTimer >= SNUS_CHARGE_TIME && snusShotsFired == 0) {
+                SnusProjectile shot;
+                shot.position = mouthPos;
+                Vector3 dir = Vector3Subtract(laserTargetPos, mouthPos);
+                if (Vector3Length(dir) < 0.1f) {
+                    dir = (Vector3){0.0f, 0.0f, 1.0f};
+                } else {
+                    dir = Vector3Normalize(dir);
+                }
+                shot.velocity = Vector3Scale(dir, SNUS_SPEED);
+                shot.radius = 1.4f;
+                shot.lifetime = 0.0f;
+                shot.active = true;
+                snusProjectiles.push_back(shot);
+                snusShotsFired = 1;
+            }
+
+            for (auto& shot : snusProjectiles) {
+                if (!shot.active) continue;
+                shot.lifetime += dt;
+                shot.position = Vector3Add(shot.position, Vector3Scale(shot.velocity, dt));
+
+                float targetDistance = Vector3Distance(shot.position, laserTargetPos);
+                if (targetDistance <= shot.radius + 1.8f) {
+                    if (targetStillValid && !IsInsideBaseFootprint(laserTargetPos, basePos)) {
+                        for (const auto& p : players) {
+                            if (!p.active || (p.hp && *p.hp <= 0) || p.isStructure) continue;
+                            if (IsInsideBaseFootprint(p.pos, basePos)) continue;
+                            if (Vector3Distance(p.pos, laserTargetPos) <= SNUS_EXPLOSION_RADIUS && p.hp) {
+                                *p.hp -= SNUS_DAMAGE;
+                            }
+                        }
+                    }
+                    shot.active = false;
+                    snusShotsFired = 2;
+                }
+
+                if (shot.lifetime > 18.0f) {
+                    shot.active = false;
+                    snusShotsFired = 2;
+                }
+            }
+
+            if (snusShotsFired == 2 && !snusProjectiles.empty()) {
+                if (snusShootTimer >= SNUS_CHARGE_TIME + snusProjectiles.front().lifetime + SNUS_EXPLOSION_LINGER) {
+                    snusProjectiles.clear();
+                    isShootingSnus = false;
+                    snusShootTimer = 0.0f;
+                    snusShotsFired = 0;
+                    snusCooldown = SNUS_COOLDOWN_TIME;
+                }
+            }
+        } else if (laserFiring) {
         
-        // --- WHITE LASER SPECIAL ATTACK ---
-        if (laserFiring) {
             // Laser is firing - deal damage and track target
             laserFireTimer += dt;
             isMoving = false;
@@ -158,8 +281,19 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
                     if (proj > 0 && proj < laserLen + 5.0f) {
                         Vector3 closestPoint = Vector3Add(laserOrigin, Vector3Scale(laserDir, proj));
                         float distToBeam = Vector3Distance(p.pos, closestPoint);
-                        if (distToBeam < 4.0f && p.hp) { // 4 unit beam width
-                            *p.hp -= 1; // Damage per frame (~60 dps at 60fps), much more survivable
+                        if (distToBeam < 5.5f && p.hp) { // Widerszy beam z lekkim spadkiem obrażeń
+                            float playerDistance = Vector3Distance(laserOrigin, p.pos);
+                            float damage = LASER_FAR_DAMAGE;
+                            if (playerDistance <= 30.0f) {
+                                damage = LASER_NEAR_DAMAGE;
+                            } else if (playerDistance <= 55.0f) {
+                                float t = (playerDistance - 30.0f) / 25.0f;
+                                damage = LASER_NEAR_DAMAGE + (LASER_MID_DAMAGE - LASER_NEAR_DAMAGE) * t;
+                            } else {
+                                float t = fminf((playerDistance - 55.0f) / (LASER_MAX_RANGE - 55.0f), 1.0f);
+                                damage = LASER_MID_DAMAGE + (LASER_FAR_DAMAGE - LASER_MID_DAMAGE) * t;
+                            }
+                            *p.hp -= (int)ceilf(damage);
                         }
                     }
                 }
@@ -202,11 +336,57 @@ void AdasGooner::Update(const std::vector<TargetInfo>& players, float* baseHp, V
                 laserFiring = true;
             }
         } else {
-            // Normal movement + count down laser cooldown
+            // Normal movement + count down special-attack cooldowns
             Enemy::Update(players, baseHp, basePos);
             
             laserCooldown -= dt;
-            if (laserCooldown <= 0.0f) {
+            smokeCooldown -= dt;
+            snusCooldown -= dt;
+
+            if (!isShootingSnus && snusCooldown <= 0.0f) {
+                bool hasSnusTarget = false;
+                float closestD = 999.0f;
+                for (const auto& p : players) {
+                    if (!p.active || (p.hp && *p.hp <= 0) || p.isStructure) continue;
+                    if (IsInsideBaseFootprint(p.pos, basePos)) continue;
+                    float d = Vector3Distance(position, p.pos);
+                    if (d < closestD) {
+                        closestD = d;
+                        laserTargetPos = p.pos;
+                        laserTargetPos.y += 1.0f;
+                        hasSnusTarget = true;
+                    }
+                }
+                if (hasSnusTarget) {
+                    isShootingSnus = true;
+                    snusShootTimer = 0.0f;
+                    snusShotsFired = 0;
+                    snusProjectiles.clear();
+                } else {
+                    snusCooldown = 2.0f;
+                }
+            }
+
+            // Start the smoke only if at least one living player is close
+            // enough to be threatened.  This prevents wasting the attack
+            // while the boss is far away from the fight.
+            if (!isShootingSnus && smokeCooldown <= 0.0f) {
+                bool hasSmokeTarget = false;
+                for (const auto& p : players) {
+                    if (!p.active || (p.hp && *p.hp <= 0) || p.isStructure) continue;
+                    if (Vector3Distance(position, p.pos) <= SMOKE_RADIUS) {
+                        hasSmokeTarget = true;
+                        break;
+                    }
+                }
+                if (hasSmokeTarget) {
+                    isSprayingSmoke = true;
+                    smokeActiveTimer = 0.0f;
+                    smokeDamageTimer = 0.0f;
+                }
+            }
+
+            if (!isSprayingSmoke && !isShootingSnus && laserCooldown <= 0.0f) {
                 // Check if there's a player nearby to target
                 bool hasTarget = false;
                 float closestD = 60.0f; // 60 unit detection range for laser
@@ -428,19 +608,20 @@ void AdasGooner::Draw() {
             // Charge-up glow - big pulsing white ball at crotch
             float chargeProgress = laserChargeTimer / 1.5f;
             float pulse = sinf(laserChargeTimer * 12.0f) * 0.4f + 0.6f;
-            float glowRadius = 1.5f + chargeProgress * 4.0f;
+            float glowRadius = 2.1f + chargeProgress * 6.25f;
             
             DrawSphere(laserOrigin, glowRadius * pulse, WHITE);
-            DrawSphere(laserOrigin, glowRadius * pulse * 1.4f, (Color){255, 255, 255, 150});
+            DrawSphere(laserOrigin, glowRadius * pulse * 1.5f, (Color){255, 255, 255, 170});
+            DrawSphere(laserOrigin, glowRadius * pulse * 2.35f, (Color){255, 230, 230, 60});
             
             // Orbiting particles
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 10; i++) {
                 float orbitAngle = (laserChargeTimer * 6.0f + i * 1.256f);
                 Vector3 particlePos = laserOrigin;
-                particlePos.x += cosf(orbitAngle) * glowRadius * 2.0f;
-                particlePos.y += sinf(orbitAngle * 1.3f) * glowRadius * 1.5f;
-                particlePos.z += sinf(orbitAngle) * glowRadius * 2.0f;
-                DrawSphere(particlePos, 0.8f + chargeProgress * 1.2f, WHITE);
+                particlePos.x += cosf(orbitAngle) * glowRadius * 2.45f;
+                particlePos.y += sinf(orbitAngle * 1.3f) * glowRadius * 1.9f;
+                particlePos.z += sinf(orbitAngle) * glowRadius * 2.45f;
+                DrawSphere(particlePos, 0.95f + chargeProgress * 1.45f, WHITE);
             }
         }
         
@@ -450,25 +631,118 @@ void AdasGooner::Draw() {
             
             if (beamLen > 0.1f) {
                 Vector3 stepDir = Vector3Normalize(beamDir);
-                float thickness = 0.6f;
+                float thickness = 0.95f;
+                float outerThickness = 1.45f;
                 
                 // Rysujemy gęsto ułożone sześciany wzdłuż całej linii - to w 100% gwarantuje,
                 // że wiązka będzie widoczna jako gruby prostokąt i żadne błędy kamery jej nie ukryją.
-                int numSteps = (int)(beamLen / 0.3f); // Sześcian co 0.3 jednostki
+                int numSteps = (int)(beamLen / 0.24f);
                 for (int i = 0; i <= numSteps; i++) {
                     Vector3 pos = {
-                        laserOrigin.x + stepDir.x * (i * 0.3f),
-                        laserOrigin.y + stepDir.y * (i * 0.3f),
-                        laserOrigin.z + stepDir.z * (i * 0.3f)
+                        laserOrigin.x + stepDir.x * (i * 0.24f),
+                        laserOrigin.y + stepDir.y * (i * 0.24f),
+                        laserOrigin.z + stepDir.z * (i * 0.24f)
                     };
                     DrawCube(pos, thickness, thickness, thickness, WHITE);
+                    if (i % 2 == 0) {
+                        DrawCube(pos, outerThickness, outerThickness, outerThickness, (Color){255, 120, 120, 80});
+                    }
                 }
                 
                 // Extra duży blok na końcu, żeby było wyraźnie widać miejsce uderzenia w gracza
-                DrawCube(laserTargetPos, 1.2f, 1.2f, 1.2f, RED);
-                DrawCube(laserOrigin, 1.2f, 1.2f, 1.2f, WHITE);
+                DrawCube(laserTargetPos, 1.6f, 1.6f, 1.6f, RED);
+                DrawCube(laserOrigin, 1.5f, 1.5f, 1.5f, WHITE);
             }
         }
+    }
+
+    // --- DRAW SNUS SHOT ---
+    if (isShootingSnus) {
+        Vector3 mouthPos = GetSnusMouthPosition(position, angle, globalUseWafelModel && wafelModelLoaded);
+        float travelTime = fmaxf(Vector3Distance(mouthPos, laserTargetPos) / SNUS_SPEED, 0.2f);
+        float hitTime = SNUS_CHARGE_TIME + travelTime;
+
+        BeginBlendMode(BLEND_ALPHA);
+        if (snusShootTimer < SNUS_CHARGE_TIME) {
+            float chargeProgress = snusShootTimer / SNUS_CHARGE_TIME;
+            float pulse = sinf(snusShootTimer * 18.0f) * 0.35f + 0.65f;
+            float glow = 1.0f + chargeProgress * 2.8f;
+
+            DrawSphere(mouthPos, glow * pulse, (Color){255, 90, 40, 210});
+            DrawSphere(mouthPos, glow * pulse * 1.7f, (Color){255, 150, 90, 90});
+            for (int i = 0; i < 6; ++i) {
+                float a = snusShootTimer * 8.0f + i * 1.047f;
+                Vector3 puff = {
+                    mouthPos.x + cosf(a) * glow * 0.9f,
+                    mouthPos.y + sinf(a * 1.2f) * glow * 0.55f,
+                    mouthPos.z + sinf(a) * glow * 0.9f
+                };
+                DrawSphere(puff, 0.35f + chargeProgress * 0.45f, (Color){255, 110, 70, 170});
+            }
+        } else if (snusShootTimer < hitTime) {
+            Vector3 beamDir = Vector3Subtract(laserTargetPos, mouthPos);
+            if (Vector3Length(beamDir) > 0.1f) {
+                beamDir = Vector3Normalize(beamDir);
+                float progress = fminf((snusShootTimer - SNUS_CHARGE_TIME) * SNUS_SPEED, Vector3Distance(mouthPos, laserTargetPos));
+                Vector3 snusPos = Vector3Add(mouthPos, Vector3Scale(beamDir, progress));
+
+                DrawSphere(snusPos, 1.6f, (Color){90, 35, 20, 255});
+                DrawSphere(snusPos, 2.4f, (Color){220, 80, 50, 90});
+
+                for (int i = 0; i < 4; ++i) {
+                    float tail = 1.2f + i * 0.8f;
+                    Vector3 trailPos = Vector3Add(snusPos, Vector3Scale(beamDir, -tail));
+                    DrawSphere(trailPos, 1.0f - i * 0.18f, (Color){120, 45, 25, 120 - i * 20});
+                }
+            }
+        } else if (snusShootTimer < hitTime + SNUS_EXPLOSION_LINGER) {
+            float boomAge = (snusShootTimer - hitTime) / SNUS_EXPLOSION_LINGER;
+            float boomPulse = 1.0f + boomAge * 1.2f;
+            BeginBlendMode(BLEND_ALPHA);
+            DrawSphere(laserTargetPos, 4.5f * boomPulse, (Color){255, 70, 40, 235});
+            DrawSphere(laserTargetPos, 8.5f * boomPulse, (Color){255, 150, 70, 125});
+            DrawSphere(laserTargetPos, 13.5f * boomPulse, (Color){255, 220, 140, 65});
+            DrawSphere(laserTargetPos, 18.5f * boomPulse, (Color){255, 255, 255, 35});
+            DrawCylinder((Vector3){laserTargetPos.x, laserTargetPos.y - 0.5f, laserTargetPos.z},
+                         4.0f * boomPulse, 4.0f * boomPulse, 0.35f, 18, (Color){255, 60, 30, 120});
+            for (int i = 0; i < 12; ++i) {
+                float a = (float)i * 0.5236f + boomAge * 8.0f;
+                float r = 4.0f + boomAge * 8.0f;
+                Vector3 sparkPos = {
+                    laserTargetPos.x + cosf(a) * r,
+                    laserTargetPos.y + sinf(a * 1.7f) * 2.0f,
+                    laserTargetPos.z + sinf(a) * r
+                };
+                DrawSphere(sparkPos, 0.45f + boomAge * 0.25f, (Color){255, 120, 70, 180});
+            }
+            EndBlendMode();
+        }
+        EndBlendMode();
+    }
+
+    // --- DRAW SMOKE CLOUD ---
+    if (isSprayingSmoke) {
+        float progress = fminf(smokeActiveTimer / 1.25f, 1.0f);
+        float cloudRadius = SMOKE_RADIUS * progress;
+        float time = (float)GetTime();
+
+        BeginBlendMode(BLEND_ALPHA);
+        // Several drifting semi-transparent puffs make the danger zone
+        // legible without hiding the whole battle.
+        for (int i = 0; i < 24; ++i) {
+            float a = time * (0.55f + (i % 4) * 0.10f) + i * 2.399f;
+            float ring = cloudRadius * (0.16f + (i % 6) * 0.14f);
+            Vector3 puffPos = {
+                position.x + cosf(a) * ring,
+                position.y + 1.35f + (i % 5) * 1.0f + sinf(a * 1.7f) * 0.8f,
+                position.z + sinf(a) * ring
+            };
+            float puffSize = 3.8f + (i % 5) * 1.1f + progress * 2.6f;
+            DrawSphere(puffPos, puffSize, (Color){60, 60, 60, 95});
+        }
+        DrawCylinder((Vector3){position.x, position.y + 0.05f, position.z},
+                     cloudRadius, cloudRadius, 0.1f, 48, (Color){55, 55, 55, 78});
+        EndBlendMode();
     }
 }
 
