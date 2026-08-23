@@ -740,28 +740,7 @@ void GibonRzygacz::Draw() {
     float pulse = sinf(pulseTimer * 3.0f) * 0.15f + 1.0f;
     float currentScale = bodyScale * pulse;
 
-    if (hp <= 30000 && gibonState == GibonState::FINISHED_FALLING) {
-        float shieldPulse = sinf(pulseTimer * 4.5f) * 1.8f;
-        float shieldRadius = 34.0f + shieldPulse;
-        Vector3 shieldCenter = {position.x, position.y + 10.0f, position.z};
-        Color shieldFill = Fade({90, 255, 70, 255}, 0.16f + sinf(pulseTimer * 6.0f) * 0.04f);
-        Color shieldWire = Fade({190, 255, 80, 255}, 0.62f);
-
-        DrawSphere(shieldCenter, shieldRadius, shieldFill);
-        DrawSphereWires(shieldCenter, shieldRadius, 32, 16, shieldWire);
-        DrawCircle3D({position.x, 0.12f, position.z}, shieldRadius, {1, 0, 0}, 90.0f,
-                     Fade({120, 255, 40, 255}, 0.45f));
-
-        for (int i = 0; i < 10; i++) {
-            float a = pulseTimer * 1.8f + (float)i * (PI * 2.0f / 10.0f);
-            Vector3 dripPos = {
-                shieldCenter.x + cosf(a) * shieldRadius * 0.72f,
-                shieldCenter.y + sinf(pulseTimer * 2.5f + (float)i) * 4.0f,
-                shieldCenter.z + sinf(a) * shieldRadius * 0.72f
-            };
-            DrawSphere(dripPos, 0.8f, Fade({130, 255, 45, 255}, 0.55f));
-        }
-    }
+    // Shield rendering moved down for proper transparency sorting.
     
     // --- CRATER ---
     if (craterCreated) {
@@ -985,6 +964,30 @@ void GibonRzygacz::Draw() {
                      {1, 0, 0}, 90.0f, Fade(BLACK, 0.3f + shadowScale * 0.4f));
     } else {
         DrawCircle3D({position.x, 0.05f, position.z}, currentScale * 1.2f, {1, 0, 0}, 90.0f, Fade(BLACK, 0.5f));
+    }
+
+    // --- SHIELD ---
+    if (hp <= 30000 && gibonState == GibonState::FINISHED_FALLING) {
+        float shieldPulse = sinf(pulseTimer * 4.5f) * 1.8f;
+        float shieldRadius = 55.0f + shieldPulse;
+        Vector3 shieldCenter = {position.x, position.y + 10.0f, position.z};
+        Color shieldFill = Fade({90, 255, 70, 255}, 0.16f + sinf(pulseTimer * 6.0f) * 0.04f);
+        Color shieldWire = Fade({190, 255, 80, 255}, 0.62f);
+
+        DrawSphere(shieldCenter, shieldRadius, shieldFill);
+        DrawSphereWires(shieldCenter, shieldRadius, 32, 16, shieldWire);
+        DrawCircle3D({position.x, 0.12f, position.z}, shieldRadius, {1, 0, 0}, 90.0f,
+                     Fade({120, 255, 40, 255}, 0.45f));
+
+        for (int i = 0; i < 10; i++) {
+            float a = pulseTimer * 1.8f + (float)i * (PI * 2.0f / 10.0f);
+            Vector3 dripPos = {
+                shieldCenter.x + cosf(a) * shieldRadius * 0.72f,
+                shieldCenter.y + sinf(pulseTimer * 2.5f + (float)i) * 4.0f,
+                shieldCenter.z + sinf(a) * shieldRadius * 0.72f
+            };
+            DrawSphere(dripPos, 0.8f, Fade({130, 255, 45, 255}, 0.55f));
+        }
     }
     
     // --- TOXIC VOMIT PROJECTILES ---

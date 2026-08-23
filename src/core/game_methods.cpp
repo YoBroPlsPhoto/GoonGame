@@ -835,6 +835,12 @@ void Game::UpdateNetworkAndEnemies() {
                   } else if (e.specialActive == 2) {
                       adas->laserFiring = true;
                       adas->laserFireTimer = e.specialTimer;
+                  } else if (e.specialActive == 3) {
+                      adas->isSprayingSmoke = true;
+                      adas->smokeActiveTimer = e.specialTimer;
+                  } else if (e.specialActive == 4) {
+                      adas->isShootingSnus = true;
+                      adas->snusShootTimer = e.specialTimer;
                   }
                   
                   temp = adas;
@@ -925,6 +931,12 @@ void Game::UpdateNetworkAndEnemies() {
                   } else if (e.specialActive == 2) {
                       adas->laserFiring = true;
                       adas->laserFireTimer = e.specialTimer;
+                  } else if (e.specialActive == 3) {
+                      adas->isSprayingSmoke = true;
+                      adas->smokeActiveTimer = e.specialTimer;
+                  } else if (e.specialActive == 4) {
+                      adas->isShootingSnus = true;
+                      adas->snusShootTimer = e.specialTimer;
                   }
                   
                   temp = adas;

@@ -206,6 +206,8 @@ void Game::Render3D() {
     for (auto &s : structures) {
       if (!s->active)
         continue;
+      s->Draw();
+      continue;
 
       // Damage-based color tinting
       float hpRatio = (float)s->hp / (float)s->maxHp;

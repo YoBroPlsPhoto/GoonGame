@@ -245,6 +245,8 @@ void Game::Render() {
     for (auto &s : structures) {
       if (!s->active)
         continue;
+      s->Draw();
+      continue;
 
       // Damage-based color tinting
       float hpRatio = (float)s->hp / (float)s->maxHp;
@@ -475,6 +477,12 @@ void Game::Render() {
           } else if (e.specialActive == 2) {
               adas->laserFiring = true;
               adas->laserFireTimer = e.specialTimer;
+          } else if (e.specialActive == 3) {
+              adas->isSprayingSmoke = true;
+              adas->smokeActiveTimer = e.specialTimer;
+          } else if (e.specialActive == 4) {
+              adas->isShootingSnus = true;
+              adas->snusShootTimer = e.specialTimer;
           }
           
           temp = adas;
@@ -621,6 +629,12 @@ void Game::Render() {
           } else if (e.specialActive == 2) {
               adas->laserFiring = true;
               adas->laserFireTimer = e.specialTimer;
+          } else if (e.specialActive == 3) {
+              adas->isSprayingSmoke = true;
+              adas->smokeActiveTimer = e.specialTimer;
+          } else if (e.specialActive == 4) {
+              adas->isShootingSnus = true;
+              adas->snusShootTimer = e.specialTimer;
           }
           
           temp = adas;
@@ -1179,9 +1193,7 @@ void Game::Render() {
       int sh = GetScreenHeight();
       DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.6f));
 
-      bool inSubMenu =
-          localPlayer.showSettings || localPlayer.showAdminSettings;
-      int boxHeight = inSubMenu ? 560 : 500;
+      int boxHeight = localPlayer.showSettings ? 560 : (localPlayer.showAdminSettings ? 680 : 500);
       Rectangle menuBox = {(float)sw / 2 - 200,
                            (float)sh / 2 - (float)boxHeight / 2, 400,
                            (float)boxHeight};
@@ -1301,6 +1313,57 @@ void Game::Render() {
               (int)(pr.y + 11), 13, WHITE);
           if (hov2 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
             Glock::globalGlockDamage = presets[p];
+        }
+        menuY += 52;
+
+        // HP label + value
+        DrawText("MAX HP:", menuBox.x + 50, menuY - 5, 18, RAYWHITE);
+        DrawText(TextFormat("%d", localPlayer.maxHp), menuBox.x + 270,
+                 menuY - 5, 22, GREEN);
+        menuY += 28;
+
+        // HP Slider bar
+        Rectangle hpBar = {menuBox.x + 50, menuY, 300, 18};
+        DrawRectangleRounded(hpBar, 0.5f, 8, Fade(BLACK, 0.7f));
+        float hpT = (float)(localPlayer.maxHp - 100) / (9999.0f - 100.0f);
+        if (hpT < 0) hpT = 0;
+        if (hpT > 1) hpT = 1;
+        DrawRectangleRounded(
+            {hpBar.x, hpBar.y, hpBar.width * hpT, hpBar.height}, 0.5f, 8,
+            GREEN);
+        DrawRectangleLinesEx(hpBar, 1, Fade(GREEN, 0.4f));
+        if (CheckCollisionPointRec(GetMousePosition(), hpBar) &&
+            IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+          float t = (GetMouseX() - hpBar.x) / hpBar.width;
+          if (t < 0)
+            t = 0;
+          if (t > 1)
+            t = 1;
+          localPlayer.maxHp = 100 + (int)(t * 9899.0f);
+          localPlayer.hp = localPlayer.maxHp;
+        }
+        menuY += 38;
+
+        // HP Preset buttons
+        const int hpPresets[] = {100, 1000, 5000, 9999};
+        const char *hpPresetLabels[] = {"100 (DEF)", "1000", "5000", "9999"};
+        const int hpPresetCount = 4;
+        for (int p = 0; p < hpPresetCount; p++) {
+          Rectangle pr = {startX2 + p * (btnW + 8.0f), menuY, btnW, 36};
+          bool hov2 = CheckCollisionPointRec(GetMousePosition(), pr);
+          bool active = (localPlayer.maxHp == hpPresets[p]);
+          DrawRectangleRounded(
+              pr, 0.3f, 8,
+              active ? Fade(GREEN, 0.9f)
+                     : (hov2 ? Fade(GRAY, 0.8f) : Fade(BLACK, 0.5f)));
+          DrawText(
+              hpPresetLabels[p],
+              (int)(pr.x + pr.width / 2 - MeasureText(hpPresetLabels[p], 12) / 2),
+              (int)(pr.y + 11), 12, WHITE);
+          if (hov2 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            localPlayer.maxHp = hpPresets[p];
+            localPlayer.hp = localPlayer.maxHp;
+          }
         }
         menuY += 52;
 

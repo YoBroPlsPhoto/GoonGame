@@ -590,8 +590,7 @@ void Game::RenderHUD() {
     if (state == GameState::PAUSED) {
         DrawRectangle(0, 0, sw, sh, Fade(BLACK, 0.60f));
 
-        bool inSubMenu = localPlayer.showSettings || localPlayer.showAdminSettings;
-        int boxH = inSubMenu ? 580 : 460;
+        int boxH = localPlayer.showSettings ? 580 : (localPlayer.showAdminSettings ? 700 : 460);
         Rectangle menuBox = {(float)sw / 2 - 200, (float)sh / 2 - (float)boxH / 2, 400, (float)boxH};
         DrawRectangleRounded(menuBox, 0.10f, 8, Fade((Color){18, 18, 22, 255}, 0.96f));
         DrawRectangleLinesEx(menuBox, 2,
@@ -712,6 +711,46 @@ void Game::RenderHUD() {
                          (int)(pr.y + 11), 12, WHITE);
                 if (hov3 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
                     Glock::globalGlockDamage = presets[p];
+            }
+            menuY += 50;
+
+            DrawText("MAX HP:", (int)(menuBox.x + 40), (int)(menuY - 5), 16, RAYWHITE);
+            DrawText(TextFormat("%d", localPlayer.maxHp),
+                     (int)(menuBox.x + 270), (int)(menuY - 5), 20, GREEN);
+            menuY += 26;
+
+            Rectangle hpBar = {menuBox.x + 40, menuY, 320, 18};
+            DrawRectangleRounded(hpBar, 0.5f, 8, Fade(BLACK, 0.7f));
+            float hpT = (float)(localPlayer.maxHp - 100) / (9999.0f - 100.0f);
+            hpT = std::max(0.0f, std::min(1.0f, hpT));
+            DrawRectangleRounded({hpBar.x, hpBar.y, hpBar.width * hpT, hpBar.height},
+                                 0.5f, 8, GREEN);
+            DrawRectangleLinesEx(hpBar, 1, Fade(GREEN, 0.4f));
+            if (CheckCollisionPointRec(GetMousePosition(), hpBar) &&
+                IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+                float t = (GetMouseX() - hpBar.x) / hpBar.width;
+                t = std::max(0.0f, std::min(1.0f, t));
+                localPlayer.maxHp = 100 + (int)(t * 9899.0f);
+                localPlayer.hp = localPlayer.maxHp;
+            }
+            menuY += 36;
+
+            const int hpPresets[] = {100, 1000, 5000, 9999};
+            const char *hpPresetLabels[] = {"100 (DEF)", "1000", "5000", "9999"};
+            float hpBtnW = 68.0f;
+            for (int p = 0; p < 4; p++) {
+                Rectangle pr = {menuBox.x + 40 + p * (hpBtnW + 8.0f), menuY, hpBtnW, 34};
+                bool hov3 = CheckCollisionPointRec(GetMousePosition(), pr);
+                bool act = (localPlayer.maxHp == hpPresets[p]);
+                DrawRectangleRounded(pr, 0.3f, 8,
+                                     act ? Fade(GREEN, 0.9f) : (hov3 ? Fade(GRAY, 0.8f) : Fade(BLACK, 0.5f)));
+                DrawText(hpPresetLabels[p],
+                         (int)(pr.x + pr.width / 2 - MeasureText(hpPresetLabels[p], 12) / 2),
+                         (int)(pr.y + 11), 12, WHITE);
+                if (hov3 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    localPlayer.maxHp = hpPresets[p];
+                    localPlayer.hp = localPlayer.maxHp;
+                }
             }
             menuY += 50;
 
