@@ -19,4 +19,15 @@ public:
     float summonTimer = 0.0f;
     float auraTimer = 0.0f;
     bool isEnraged = false;
+    int animFrame = 0;
+    int currentAnimIndex = 0;
+    
+    // Shared model resources
+    static Model primeModel;
+    static ModelAnimation* primeAnims;
+    static int primeAnimCount;
+    static bool primeModelLoaded;
+    
+    static void LoadSharedResources();
+    static void UnloadSharedResources();
 };

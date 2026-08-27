@@ -10,6 +10,13 @@ AK47::AK47() {
     recoilTimer = 0.0f;
     gunBob = 0.0f;
     magSize = 30; currentAmmo = 30; reserveAmmo = 180; maxReserve = 300; ammoPrice = 500; reloadTime = 2.5f;
+
+    shootSound = LoadSound("../audio/ak47/shoot.mp3");
+    reloadSound = LoadSound("../audio/ak47/reload.mp3");
+    finishReloadSound = LoadSound("../audio/ak47/finishReload.mp3");
+    hasShootSound = true;
+    hasReloadSound = true;
+    hasFinishReloadSound = true;
 }
 
 void AK47::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {
@@ -25,6 +32,7 @@ void AK47::Fire() {
     currentCooldown = attackCooldown;
     recoilTimer = 0.08f;
     currentAmmo--;
+    if (hasShootSound) PlaySound(shootSound);
 }
 
 void AK47::DrawViewModel(Camera3D camera) {

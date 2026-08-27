@@ -11,6 +11,9 @@ Shotgun::Shotgun() {
     gunBob = 0.0f;
     pumpTimer = 0.0f;
     magSize = 8; currentAmmo = 8; reserveAmmo = 40; maxReserve = 120; ammoPrice = 600; reloadTime = 2.0f;
+
+    reloadSound = LoadSound("../audio/shotgun/reload.mp3");
+    hasReloadSound = true;
 }
 
 void Shotgun::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {

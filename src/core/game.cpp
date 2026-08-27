@@ -39,7 +39,9 @@ Game::Game()
   activeBoss = nullptr;
   adasDropTimer = 0.0f;
 }
-Game::~Game() {}
+Game::~Game() {
+    AdasPrime::UnloadSharedResources();
+}
 
 void Game::Init() {
 
@@ -63,6 +65,13 @@ void Game::Init() {
   UnloadImage(sunImg);
 
   AdasGooner::LoadSharedResources();
+  AdasPrime::LoadSharedResources();
+  
+  // Apply lighting shader and gold color to Adas Prime model
+  for (int i = 0; i < AdasPrime::primeModel.materialCount; i++) {
+      AdasPrime::primeModel.materials[i].shader = lighting;
+      AdasPrime::primeModel.materials[i].maps[MATERIAL_MAP_ALBEDO].color = {255, 215, 0, 255}; // GOLD
+  }
 
   viewPosLoc = GetShaderLocation(lighting, "viewPos");
   lightPosLoc = GetShaderLocation(lighting, "lightPos");

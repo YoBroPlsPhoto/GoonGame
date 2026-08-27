@@ -10,6 +10,9 @@ AWP::AWP() {
     recoilTimer = 0.0f;
     gunBob = 0.0f;
     magSize = 5; currentAmmo = 5; reserveAmmo = 25; maxReserve = 50; ammoPrice = 1500; reloadTime = 3.0f;
+
+    shootSound = LoadSound("../audio/sniper/shoot.mp3");
+    hasShootSound = true;
 }
 
 void AWP::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {
@@ -34,6 +37,7 @@ void AWP::Fire() {
     currentCooldown = attackCooldown;
     recoilTimer = 0.3f;
     currentAmmo--;
+    if (hasShootSound) PlaySound(shootSound);
 }
 
 void AWP::DrawViewModel(Camera3D camera) {

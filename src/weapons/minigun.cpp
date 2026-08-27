@@ -11,6 +11,9 @@ Minigun::Minigun() {
     gunBob = 0.0f;
     rotationAngle = 0.0f;
     magSize = 200; currentAmmo = 200; reserveAmmo = 600; maxReserve = 1000; ammoPrice = 800; reloadTime = 5.0f;
+
+    shootSound = LoadSound("../audio/minigun/shoot.mp3");
+    hasShootSound = true;
 }
 
 void Minigun::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {
@@ -29,6 +32,7 @@ void Minigun::Fire() {
     currentCooldown = attackCooldown;
     recoilTimer = 0.1f;
     currentAmmo--;
+    if (hasShootSound) PlaySound(shootSound);
 }
 
 void Minigun::DrawViewModel(Camera3D camera) {

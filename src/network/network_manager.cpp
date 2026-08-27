@@ -297,7 +297,13 @@ void NetworkManager::StartDiscovery() {
         discovery_socket->open(asio::ip::udp::v4());
         discovery_socket->set_option(asio::socket_base::reuse_address(true));
         discovery_socket->set_option(asio::socket_base::broadcast(true));
-        discovery_socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), 1235));
+        
+        asio::error_code ec;
+        discovery_socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), 1235), ec);
+        if (ec) {
+            // Fallback to random port if 1235 is taken (e.g. multiple instances on same Linux PC)
+            discovery_socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), 0), ec);
+        }
         discovery_socket->non_blocking(true);
     } catch (...) {
         if (discovery_socket) {
@@ -358,6 +364,7 @@ void NetworkManager::Update() {
                     ping_socket->close();
                     delete ping_socket;
                     ping_socket = nullptr;
+                    break;
                 }
             }
         }

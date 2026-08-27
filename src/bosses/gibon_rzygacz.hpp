@@ -5,7 +5,6 @@
 constexpr int GIBON_VOMIT_SHIELD_HP = 30000;
 constexpr float GIBON_VOMIT_SHIELD_RADIUS = 34.0f;
 
-enum class GibonState { FALLING, IMPACT, CRATER_PAUSE, ROLLING, FINISHED_FALLING };
 enum class GibonState { FALLING, IMPACT, CRATER_PAUSE, ROLLING, FINISHED_FALLING, JUMPING };
 
 enum class GibonJumpState { NONE, WINDUP, AIR, IMPACT };
@@ -128,10 +127,8 @@ public:
     float bodyScale;
     Color toxicColor;
 
-    // Jump Attack
     GibonJumpState jumpState;
     float jumpAttackCooldown;
     float jumpAttackTimer;
-    Vector3 jumpStartPos;
     Vector3 jumpTargetPos;
 };

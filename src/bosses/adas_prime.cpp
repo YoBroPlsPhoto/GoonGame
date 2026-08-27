@@ -3,6 +3,27 @@
 #include "raymath.h"
 #include <cmath>
 
+Model AdasPrime::primeModel;
+ModelAnimation* AdasPrime::primeAnims = nullptr;
+int AdasPrime::primeAnimCount = 0;
+bool AdasPrime::primeModelLoaded = false;
+
+void AdasPrime::LoadSharedResources() {
+    if (!primeModelLoaded) {
+        primeModel = LoadModel("../models/prime.glb");
+        primeAnims = LoadModelAnimations("../models/prime.glb", &primeAnimCount);
+        primeModelLoaded = true;
+    }
+}
+
+void AdasPrime::UnloadSharedResources() {
+    if (primeModelLoaded) {
+        if (primeAnimCount > 0) UnloadModelAnimations(primeAnims, primeAnimCount);
+        UnloadModel(primeModel);
+        primeModelLoaded = false;
+    }
+}
+
 AdasPrime::AdasPrime(Vector3 startPos, int enemyId) 
     : Enemy(startPos, EnemyType::ADAS_PRIME, WeaponType::KATANA, enemyId) {
     cutsceneState = PrimeCutscene::WARDROBE_CLOSED;
@@ -86,6 +107,19 @@ void AdasPrime::Update(const std::vector<TargetInfo>& players, float* baseHp, Ve
             attackTimer = 1.0f;
         }
     }
+    
+    // Animation update
+    if (primeModelLoaded && primeAnimCount > 0) {
+        animFrame++;
+        if (isMoving) currentAnimIndex = 0; // Assuming 0 is walk/run if exists
+        else currentAnimIndex = 0; // Idle
+        
+        if (currentAnimIndex < primeAnimCount) {
+            ModelAnimation anim = primeAnims[currentAnimIndex];
+            if (animFrame >= anim.keyframeCount) animFrame = 0;
+            UpdateModelAnimation(primeModel, anim, animFrame);
+        }
+    }
 }
 
 void AdasPrime::Draw() {
@@ -122,38 +156,12 @@ void AdasPrime::Draw() {
     }
 
     // --- DRAW ADAS PRIME ---
-    float scale = 14.0f; // Even bigger than regular Adas
-    float animWalk = isMoving ? sinf(walkTimer * 10.0f) : 0.0f;
+    float scale = 0.5f; // Adjust scale for the .glb model
     
-    rlPushMatrix();
-    rlTranslatef(position.x, position.y, position.z);
-    rlRotatef(angle, 0, 1, 0);
-    rlScalef(scale, scale, scale);
+    if (primeModelLoaded) {
+        DrawModelEx(primeModel, position, {0, 1, 0}, angle + 180.0f, {scale, scale, scale}, WHITE);
+    }
 
-    Color skin = { 255, 220, 180, 255 }; 
-    Color clothes = { 20, 20, 20, 255 }; // Jet black suit
-
-    // Legs
-    rlPushMatrix(); rlTranslatef(-0.2f, 0.4f, 0); rlRotatef(animWalk * 35.0f, 1, 0, 0);
-    DrawCube({0,0,0}, 0.25f, 0.8f, 0.25f, BLACK); rlPopMatrix();
-    rlPushMatrix(); rlTranslatef(0.2f, 0.4f, 0); rlRotatef(-animWalk * 35.0f, 1, 0, 0);
-    DrawCube({0,0,0}, 0.25f, 0.8f, 0.25f, BLACK); rlPopMatrix();
-
-    // Torso
-    DrawCube({ 0, 1.25f, 0 }, 1.0f, 0.9f, 0.6f, clothes); 
-    DrawCube({ 0, 1.75f, 0 }, 1.3f, 0.4f, 0.7f, clothes); // huge shoulders
-
-    // Golden Tie
-    DrawCube({ 0, 1.6f, 0.31f }, 0.15f, 0.6f, 0.05f, GOLD);
-
-    // Head
-    rlPushMatrix(); rlTranslatef(0, 2.2f, 0);
-    DrawCube({0,0,0}, 0.5f, 0.5f, 0.5f, skin);
-    // Golden Crown/Sunglasses
-    DrawCube({0, 0.15f, 0.26f}, 0.4f, 0.15f, 0.1f, GOLD); // Golden visor
-    rlPopMatrix();
-    
-    rlPopMatrix();
 }
 
 BoundingBox AdasPrime::GetBoundingBox() {

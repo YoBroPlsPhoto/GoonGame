@@ -12,6 +12,11 @@ Glock::Glock() {
     recoilTimer = 0.0f;
     gunBob = 0.0f;
     magSize = 17; currentAmmo = 17; reserveAmmo = 120; maxReserve = 300; ammoPrice = 200; reloadTime = 1.5f;
+
+    shootSound = LoadSound("../audio/pistol/shoot.mp3");
+    finishReloadSound = LoadSound("../audio/pistol/finishR.mp3");
+    hasShootSound = true;
+    hasFinishReloadSound = true;
 }
 
 void Glock::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {
@@ -28,6 +33,7 @@ void Glock::Fire() {
     currentCooldown = attackCooldown;
     recoilTimer = 0.15f;
     currentAmmo--;
+    if (hasShootSound) PlaySound(shootSound);
 }
 
 void Glock::DrawViewModel(Camera3D camera) {

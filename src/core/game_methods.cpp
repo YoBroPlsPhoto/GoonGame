@@ -393,7 +393,6 @@ void Game::HandleShooting() {
       // --- NETWORK SYNC ---
       if (net.mode == NetworkManager::Mode::SERVER) {
           if (state == GameState::GAME || state == GameState::PAUSED) {
-              int enemyIdCounter = 0;
               int totalEnemiesThisWave = 5 + currentWave * 4;
               if (currentWave == 10 || currentWave == 20 || currentWave == 30) totalEnemiesThisWave = 1;
               if (currentWave == 40) totalEnemiesThisWave = 15; // 1 boss + 14 guards

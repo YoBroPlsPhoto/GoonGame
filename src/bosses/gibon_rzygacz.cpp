@@ -1066,7 +1066,6 @@ void GibonRzygacz::Draw() {
         }
     }
     
-    rlPopMatrix();
     
     // Impact shockwave and debris during IMPACT state (independent of gibon rotation)
     if (gibonState == GibonState::IMPACT && stateTimer < 2.0f) {

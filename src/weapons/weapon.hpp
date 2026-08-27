@@ -22,7 +22,18 @@ public:
     float reloadTimer = 0.0f;
     bool isReloading = false;
 
-    virtual ~Weapon() = default;
+    Sound shootSound = {0};
+    Sound reloadSound = {0};
+    Sound finishReloadSound = {0};
+    bool hasShootSound = false;
+    bool hasReloadSound = false;
+    bool hasFinishReloadSound = false;
+
+    virtual ~Weapon() {
+        if (hasShootSound) UnloadSound(shootSound);
+        if (hasReloadSound) UnloadSound(reloadSound);
+        if (hasFinishReloadSound) UnloadSound(finishReloadSound);
+    }
     virtual void Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) = 0;
     virtual void DrawViewModel(Camera3D camera) = 0;
     
@@ -47,6 +58,7 @@ public:
         if (isReloading || currentAmmo == magSize || reserveAmmo <= 0) return;
         isReloading = true;
         reloadTimer = reloadTime;
+        if (hasReloadSound) PlaySound(reloadSound);
     }
 
     void UpdateReload(float dt) {
@@ -58,6 +70,7 @@ public:
             int toLoad = (reserveAmmo >= needed) ? needed : reserveAmmo;
             currentAmmo += toLoad;
             reserveAmmo -= toLoad;
+            if (hasFinishReloadSound) PlaySound(finishReloadSound);
         }
     }
 

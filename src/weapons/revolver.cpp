@@ -11,6 +11,9 @@ Revolver::Revolver() {
     gunBob = 0.0f;
     cylinderAngle = 0.0f;
     magSize = 6; currentAmmo = 6; reserveAmmo = 36; maxReserve = 120; ammoPrice = 400; reloadTime = 2.0f;
+
+    shootSound = LoadSound("../audio/revolver/shoot.mp3");
+    hasShootSound = true;
 }
 
 void Revolver::Update(float dt, bool isGrounded, Vector2 mouseDelta, bool isSprinting, bool isMoving) {
@@ -27,6 +30,7 @@ void Revolver::Fire() {
     recoilTimer = 0.2f;
     cylinderAngle += 60.0f; // 360/6 = 60 degrees per shot
     currentAmmo--;
+    if (hasShootSound) PlaySound(shootSound);
 }
 
 void Revolver::DrawViewModel(Camera3D camera) {
